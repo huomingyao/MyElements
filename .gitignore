@@ -1,0 +1,19 @@
+# Godot 4+ specific ignores
+.godot/
+/android/
+
+# 构建产物（SPEC-09 §1：exe 不进 git）
+/build/
+*.exe
+*.pck
+
+# 密钥与本地配置（安全红线：绝不进 git）
+config.cfg
+*.env
+.env
+.git-remote-url
+
+# 系统与编辑器杂项
+Thumbs.db
+desktop.ini
+.DS_Store
