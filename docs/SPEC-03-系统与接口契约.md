@@ -62,6 +62,7 @@ var purity_check_unlocked: bool = false
 
 | 签名 | 说明 |
 |---|---|
+| `tick(delta: float) -> void` | **唯一时间推进入口**：推进昼夜时钟 + 结算三值消耗。由 `scenes/main/world.gd` 在 `_process(delta)` 里调用；测试可一次注入 600 秒（[SPEC-06 §3](SPEC-06-测试计划.md) 可测性约束）。autoload 自身**不**在 `_process` 里跑时钟 |
 | `is_night() -> bool` | 当前是否夜晚 |
 | `current_zone() -> String` | 当前区域 id（`grassland/camp/saltlake/mine/academy`） |
 | `set_zone(zone_id: String) -> void` | 区域触发器调用；内部去重后发 `zone_changed` |
@@ -131,6 +132,7 @@ signal flag_changed(key: String, value: bool)
 | `try_craft(items: Array, tool: String, condition: String) -> Dictionary` | 核心匹配 |
 | `get_recipe(id: String) -> Dictionary` | 按 id 取配方 |
 | `unlocked_recipes() -> Array[String]` | 已解锁（已成功合成过）的配方 id 列表，图鉴用 |
+| `get_fail_message(fail_id: String) -> Dictionary` | 按 `fail_tip_id` 取失败文案记录 `{id, reason, text}`；不存在返回空字典。失败池 id 只在 `fail_messages.json`，不在 `tips.json`（[SPEC-01 FR-G-07 判定口径](SPEC-01-需求与验收.md)） |
 | `reload() -> void` | 重新读数据表（调参/测试用） |
 
 `try_craft` 返回结构（**契约，不许改字段名**）：
@@ -172,7 +174,20 @@ func interact(player: Node) -> void      # 执行交互
 - 范围内多个对象时按距离最近选择。
 - `interact()` 内部不许阻塞（异步逻辑用信号/await，不用 `while`）。
 
----
+### 5.1 玩家场景（`scenes/player/`，TP-04 落地）
+
+场景层，**不属冻结面**（不是 autoload）。只调用 autoload，不自读数据表（§1）。
+节点结构与唯一名：
+
+```
+Player（CharacterBody2D，player.gd）
+├── Body            # CollisionShape2D
+├── %Interactor     # Area2D，interactor.gd，半径 player.interact_radius
+├── %PromptBubble   # Label，头顶「按 E」提示（文案走 get_ui_string）
+├── %ViewLight      # PointLight2D，半径按 dark/torch_view_radius 切换
+└── %Camera         # Camera2D，player_camera.gd
+```
+<!-- PLAYER_TABLES -->
 
 ## 6. 导师模块接口（P3）
 
@@ -202,6 +217,24 @@ func interact(player: Node) -> void      # 执行交互
 - 只解析 `monitor` 消息中的 @；其他导师消息中的 @ 一律忽略（不触发新一轮）。
 - 递归深度硬上限 1 次调度，代码层面用计数器保证，不依赖 prompt 自觉。
 
+**非契约辅助**（TP-14 落地新增，不属冻结面，调用方勿依赖）：
+
+| 签名 | 说明 |
+|---|---|
+| `load_from(rows: Array) -> void` | 数据注入口（SPEC-06 §3），`_init()` 内部调它读 `mentors.json` |
+| `set_reply_provider(provider: Callable) -> void` | 注入回复来源 `(mentor_id, question) -> String`；未注入时走 `LLMClient.ask` |
+| `dispatch_count() -> int` | 本次 `handle_message` 已调度次数（硬上限 1 的可观测点） |
+| `system_prompt_for(mentor_id: String) -> String` | 人设段 + 通用后缀；未知 id 返回 `""`（不许把后缀单独喂给 LLM） |
+
+### 6.1.1 PromptSuffix（`scripts/mentor/prompt_suffix.gd`）
+
+纯逻辑 `RefCounted`，可直接实例化。承载 SPEC-04 §6 的通用 system 后缀，是**唯一**允许把 prompt 文本写进代码的文件（后缀属技术约束而非人设内容，人设一律在 `mentors.json`，FR-M-06 AC1）。
+
+| 签名 | 说明 |
+|---|---|
+| `text() -> String` | 返回通用后缀原文 |
+| `append_to(persona: String) -> String` | 人设段 + 后缀；人设段为空时返回 `""` |
+
 ### 6.2 LLMClient（P3）
 
 | 签名 | 说明 |
@@ -221,6 +254,38 @@ func interact(player: Node) -> void      # 执行交互
 - 历史只带最近 4 轮。
 - 玩家输入在进入 prompt 前必须经过 `sanitize_input()`（截断 200 字符 + 清理控制字符）。
 
+**非契约辅助**（TP-15 落地新增，不属冻结面，调用方勿依赖）：
+
+| 签名 | 说明 |
+|---|---|
+| `set_transport(transport: Callable) -> void` | 注入传输层 `(payload: Dictionary) -> Dictionary`，返回 `{result, code, body}`；这是 `_generate_reply()` 内部**唯一**发包处，测试注入后不发真实请求 |
+| `build_request_body(mentor_id, question, history) -> Dictionary` | 组请求体（供 IT-M07 直接断言 `model` / `messages` / `max_tokens` / `temperature`） |
+| `attempt_count() -> int` | 上一次 `ask()` 实际发包次数（重试上限的可观测点；离线时为 0） |
+| `timeout_seconds() -> float` / `retry_count() -> int` | 当前生效值，默认读 `balance.json` 的 `llm.*` |
+| `set_timeout_seconds(value: float)` / `set_retry_count(value: int)` | 测试调小用（FR-M-08 AC1「常量可在测试中调小」） |
+| `set_qa_fallback(qa: RefCounted) -> void` | 注入离线兜底表（默认自建 `scripts/mentor/qa_fallback.gd`） |
+
+**传输层返回约定**（`set_transport` 的 Callable 与真实 `HTTPRequest` 共用同一形状）：
+
+| 键 | 类型 | 说明 |
+|---|---|---|
+| `result` | `int` | `HTTPRequest.Result`，`RESULT_SUCCESS` 之外一律算失败（超时用 `RESULT_TIMEOUT`，连不上用 `RESULT_CANT_CONNECT`） |
+| `code` | `int` | HTTP 状态码，无响应时为 `0`；非 200 算失败 |
+| `body` | `String` | 响应正文；非法 JSON 或缺 `choices[0].message.content` 算失败（畸形 body） |
+
+四种失败（超时 / 网络错 / 非 200 / 畸形 body）一律返回空串，由 `ask()` 转入离线兜底，**不抛异常**（FR-M-08 AC2）。
+
+**历史元素约定**（消除「4 轮」的歧义）：`history` 的每个元素是一**轮**对话
+`{"question": String, "answer": String}`，进请求体时展开为 `user` + `assistant` 两条 message。
+`_trim_history()` 只保留最后 `llm.history_rounds`（默认 4）个元素。
+
+**网络常量**（非玩家可见文案，属技术约束，写在 `llm_client.gd` 常量区）：
+端点 `https://api.deepseek.com/chat/completions`、模型 `deepseek-chat`、鉴权头 `Authorization: Bearer <key>`（OpenAI 兼容）。
+`max_tokens` / `temperature` 读 `balance.json` 的 `llm.max_tokens` / `llm.temperature`。
+
+**离线回答组装**：`_offline_reply()` = `QaFallback.answer(question)` + `ui_strings.chat_offline_badge`。
+兜底表为空（无兜底行）时只返回角标，保证离线回复永不为空串（否则 UI 显示空气泡）。
+
 ### 6.3 离线兜底（`scripts/mentor/qa_fallback.gd`）
 
 | 签名 | 说明 |
@@ -229,6 +294,27 @@ func interact(player: Node) -> void      # 执行交互
 | `match_score(question: String, keywords: Array) -> int` | 命中关键词数（供测试直接断言） |
 
 离线回答由调用方统一追加「（离线模式）」后缀，**不在数据表里写这个后缀**。
+
+### 6.4 配置面板占位（`scenes/mentor/config_panel.tscn` + `config_panel.gd`）
+
+FR-M-10 的 UI 占位，**不属冻结面**（场景层，不是 autoload）。只调用 autoload，不自读数据表（§1）。
+| 签名 | 说明 |
+|---|---|
+| `apply_api_key() -> bool` | 把输入框里的 key 交给 `LLMClient.set_api_key()`（只写 `user://config.cfg`）。空串视为不改动并返回 false；成功返回 true。**不回显、不记录 key** |
+| `set_offline_toggle(value: bool) -> void` | 手动离线开关（FR-M-08 AC4），转发 `LLMClient.set_offline()`；面板打开时按 `is_offline()` 同步显示 |
+| `personality() -> float` | 性格滑块当前值。**只读展示，任何模块都不许消费它**（FR-M-10 AC2「可拖动但不改变行为」） |
+| `note_text() -> String` | 界面上的「赛后可配置」说明，取自 `GameManager.get_ui_string("config_note")` |
+
+**非契约辅助**（测试用，调用方勿依赖）：`set_client(client: Node) -> void` 注入 LLM 客户端（默认 `/root/LLMClient`）。
+测试**不许**让面板碰真实 `user://config.cfg`（里面是玩家的 key），一律注入假客户端断言「转发了什么」。
+
+节点唯一名（`%Name`）：`%KeyInput`（`LineEdit`，`secret = true`）、`%ApplyButton`、`%OfflineToggle`、`%PersonalitySlider`、`%NoteLabel`。
+
+约束：
+- key 输入框 `secret = true`，且**不许**把输入内容写进任何 `push_*` / `print`（NFR-05）。
+- 面板不缓存 key、不提供读取 key 的方法；只有「写入」方向。
+- 性格滑块不连任何逻辑——`personality()` 仅供测试断言「拖动后值变了但行为没变」。
+- 界面短语只走 `get_ui_string()`（NFR-04），本面板不新增 `ui_strings.json` 键（`config_note` 已存在，SPEC-05 §9）。
 
 ---
 
@@ -281,3 +367,23 @@ World（scenes/main/world.tscn，P1）
 | 日期 | 变更 | 原因 | 批准 |
 |---|---|---|---|
 | 2026-08-01 | 初版定稿 | 规格阶段 | 待 P1 在 H1 确认冻结 |
+| 2026-08-02 | **接口冻结生效**（TP-01 完成，UT-C09/UT-D08/IT-C01 全绿）。五个 autoload 骨架按本文件签名建立，反射断言通过 | H1 冻结点到达 | P1 |
+| 2026-08-02 | **新增契约方法** `GameManager.tick(delta: float) -> void`（§2.2 首行）。理由：SPEC-06 §3 要求「昼夜与三值消耗接受 `delta` 参数推进，不直接读 `Time`」，但冻结面上原本没有任何时间推进入口，规格自相矛盾。本次只**新增**，未修改任何已有签名 | TP-03（FR-C-02/03/04）实现需要，且补齐 SPEC-06 §3 可测性约束的缺口 | P1 |
+| 2026-08-02 | 补记骨架期新增的**非契约**辅助方法（不属冻结面，调用方勿依赖）：`GameManager.reload_config/reset_stats/set_respawn_reference_position`、`KnowledgeTip.reload/queue_size`、`RecipeDB.reload/mark_unlocked`、`WorldMap.reload/is_open`、`LLMClient.sanitize_input`（FR-M-03 要求）、`scripts/autoload/data_loader.gd`（静态数据读取工具，不注册 autoload） | 实现需要，且不改动 §2..§7 已冻结签名 | P1 |
+| 2026-08-02 | TP-03 新增的**非契约**辅助（不属冻结面，调用方勿依赖）：`GameManager.reset_clock()`（时钟回第一天清晨，测试/新开局用）、`GameManager.oxygen_net_rate() -> float`（当前区域氧气净速率，供 HUD 与测试查询）、`KnowledgeTip.load_from(rows: Array)`（数据注入口，SPEC-06 §3 可测性约束，`reload()` 内部改为调它） | TP-03（FR-C-02/03/04）实现与可测性需要，未改动 §2..§7 已冻结签名 | P1 |
+| 2026-08-02 | **新增契约方法** `RecipeDB.get_fail_message(fail_id: String) -> Dictionary`（§4 表）。理由：`try_craft` 返回的 `fail_tip_id` 是 `fail_messages.json` 的 id 而非 `tips.json` 的 id，冻结面上原本没有把它换成文案的入口，调用方只能自己 `FileAccess` 读表——违反 §1「数据表只由 autoload 读取」。本次只**新增**，未修改任何已有签名 | TP-07（FR-G-07）实现需要，补齐失败文案取用入口 | P1 |
+| 2026-08-02 | TP-07 新增的**非契约**辅助（不属冻结面，调用方勿依赖）：`RecipeDB.all_recipes()`（11 条配方记录，测试与图鉴用）、`all_fail_messages()`（失败池全量）、`build_card(recipe)`（按 FR-G-06 组装卡片五字段）、`reset_rotation()`（失败文案轮转计数器复位，SPEC-06 §3 确定性约束）、`reset_unlocked()`（已解锁进度复位，测试/新开局用；进度非表数据故不并入 `reload()`）。行为变更：骨架期 `try_craft` 恒返回 `no_match`，本次按 §4 规则 1~5 实现真匹配 | TP-07（FR-G-04/G-07）实现与可测性需要，未改动 §2..§7 已冻结签名 | P1 |
+| 2026-08-02 | TP-06 新增两个 `scripts/gameplay/` **纯逻辑类**（**不属冻结面**，不是 autoload，可被单测直接实例化，同 §6.1 MentorRouter 的定位）：`inventory.gd`（`slot_count/stack_limit/slots/used_slots/count_of/has_item/add_item/remove_item/clear` + 信号 `inventory_changed`；格数与堆叠上限走 `GameManager.get_balance("inventory.hotbar_slots"/"inventory.stack_limit")`）、`discovery.gd`（`discover/is_discovered/discovered_count/discovered_ids/count_total/counted_count/reset` + 信号 `substance_discovered(substance_id)`；计数集合总数由 `RecipeDB.all_substances()` 数 `count_in_hud=true` 得出，**不写死 16**）。二者只调用已冻结的 `get_balance` / `all_substances`，未改动 §2..§7 任何签名 | TP-06（FR-G-02/G-03）实现需要；数据表仍只由 autoload 读取（§1） | P1 |
+| 2026-08-02 | TP-14 新增两个 `scripts/mentor/` **纯逻辑类**（**不属冻结面**，不是 autoload，可被单测直接实例化，见 §6.1 / §6.1.1）：`mentor_router.gd`（§6.1 四个契约方法 + 非契约辅助 `load_from` / `set_reply_provider` / `dispatch_count` / `system_prompt_for`；分类关键词、派活对象、调度语、人设全部读自 `mentors.json`，代码里零内容文本）、`prompt_suffix.gd`（SPEC-04 §6 通用后缀 `text()` / `append_to()`，唯一允许写 prompt 文本的文件）。二者只经静态 `DataLoader` 读表、只调用已冻结的 `LLMClient.ask`，未改动 §2..§7 任何签名 | TP-14（FR-M-04/M-05/M-06）实现需要；数据表仍不由场景自读（§1） | P1 |
+| 2026-08-02 | TP-15 §6.2 补齐三处**规格缺口**（均为新增，未改动 §2..§7 已冻结签名）：①「历史只带最近 4 轮」原未定义「一轮」的数据形状，实现只能猜——现约定 `history` 元素为 `{"question", "answer"}`，进请求体展开成 `user`+`assistant` 两条；②「测试通过注入 stub 替换 `_generate_reply()`」在 GDScript 里无法对 autoload 做方法替换——改为在 `_generate_reply()` 内部留唯一发包点 `set_transport(Callable)`，并定义传输层返回形状 `{result, code, body}` 与四种失败的判定口径；③ 端点/模型/鉴权头此前无处记载，现钉在 §6.2「网络常量」。同时补记非契约辅助 `build_request_body` / `attempt_count` / `timeout_seconds` / `retry_count` / `set_timeout_seconds` / `set_retry_count` / `set_qa_fallback`。行为变更：骨架期 `_offline_reply()` 只返回角标，本次改为 `QaFallback.answer()` + 角标 | TP-15（FR-M-07/M-08/M-09）实现与 UT-M08/IT-M07 可测性需要 | P1 |
+| 2026-08-02 | TP-15 新增 `scripts/mentor/qa_fallback.gd`（§6.3 契约 `answer` / `match_score` + 非契约辅助 `load_from` / `best_row` / `mentor_id_for`）。纯逻辑 `RefCounted`，经静态 `DataLoader` 读 `qa_fallback.json`，零命中话术取自表中兜底行（SPEC-04 §7），代码里零玩家可见文案 | TP-15（FR-M-09）实现需要 | P1 |
+| 2026-08-02 | TP-15 新增 §6.4「配置面板占位」：`scenes/mentor/config_panel.tscn` + `config_panel.gd`（**场景层，不属冻结面**）。理由：FR-M-10 只在 SPEC-01/02 里描述了「key 输入框可用 + 滑块可拖不生效 + 明示赛后可配置」，冻结面上没有任何落点，实现无处对齐——现钉住四个方法（`apply_api_key` / `set_offline_toggle` / `personality` / `note_text`）、五个唯一名节点与 NFR-05 口径（`secret = true`、不回显、不记录、只写不读）。同时把 FR-M-08 AC4 的手动离线开关归到本面板。未新增 `ui_strings.json` 键（`config_note` 已在 SPEC-05 §9），未改动 §2..§7 已冻结签名 | TP-15（FR-M-10 / FR-M-08 AC4）实现需要；MT-M10 手工验收的对齐基线 | P1 |
+| 2026-08-02 | TP-05 新增的**非契约**辅助（不属冻结面，调用方勿依赖）：`KnowledgeTip.advance(delta: float)`（唯一时间推进入口，由渲染层在 `_process` 里调；autoload 自身不跑 `_process`）、`current_tip_id()`、`current_text()`、`current_style()`（供渲染层与测试读当前显示状态）。行为变更：骨架期的「入队即立刻出队」改为**真串行队列**——排队中的字幕在上台时才发 `tip_shown`，`warning` 抢占时被打断的字幕直接作废不重播 | TP-05（FR-U-01）实现需要；§3 已冻结的 5 个方法签名与 2 个信号未变 | P1 |
+| 2026-08-02 | TP-08 新增 `scripts/gameplay/hydrogen_event.gd`（**纯逻辑 RefCounted，不属冻结面**：`ignite(items)` / `is_purity_check_available()` / `do_purity_check()` / `unlock_purity_check()` + 信号 `explosion_triggered` / `purity_check_performed`；爆炸伤害读 `balance.json damage.hydrogen_explosion`，解锁走 `debug.force_purity_unlock` 或导师回调）与 `scenes/gameplay/explosion.gd/.tscn`（场景层表现：`bind(event)` 唯一接线，火光 tween + 相机衰减震屏，音效挂载点无 stream 静默跳过）。只调用已冻结的 `RecipeDB.try_craft/build_card`、`GameManager.modify_health/set_flag`、`KnowledgeTip.show`，未改动 §2..§7 任何签名 | TP-08（FR-G-08/G-09）实现需要 | P1 |
+| 2026-08-02 | TP-09 新增 `scripts/gameplay/item_effects.gd`（**纯逻辑 RefCounted，不属冻结面**：`use_item/equip/unequip/is_equipped/equipped_ids/effect_value`，八种道具效果按 items.json 的 `effect_value_key` 动态读 balance.json）与 `scenes/gameplay/monster_co_ghost.*` / `monster_acid_mist.*` / `monster_spawner.gd`（场景层，刷怪区间与伤害全读 balance；玩家经 `player` 组或 `target_player` 写入定位，装备经 `player.get_equipped_item_ids()` 可选方法读取）。未改动 §2..§7 任何签名 | TP-09（FR-G-10/G-11/G-12）实现需要 | P1 |
+| 2026-08-02 | TP-10 新增 `scenes/gameplay/facility_*`（场景层，不属冻结面）：`facility_base.gd` 基类统一 §5 三方法与 autoload 访问，过滤器/电解器/篝火/床/实验台/湖水六个设施 + `facility_salt_purifier.gd` 粗盐三步纯逻辑状态机（`dissolve→filter→evaporate` 顺序强制）。设施经 `player.get("inventory")` 鸭子类型取背包（玩家侧挂载点由主 Agent 统一补）。电解 1:2 产出计数暂锚 `facility_electrolyzer.gd` 常量区（data/ 单写者约束，recipes.json 增加 outputs 计数字段后可下沉）。未改动 §2..§7 任何签名 | TP-10（FR-G-13/G-14、FR-C-05）实现需要 | P1 |
+| 2026-08-02 | TP-11 新增 `scenes/gameplay/drop_bag.*` 与 `scenes/ui/death_screen.*`（场景层，不属冻结面）：掉落包 `spawn_at(parent, position, items)` 静态入口（新包替换旧包）、死亡画面监听 `player_died` 弹出、任意键 `confirm()` → `respawn_player()`。`game_manager.gd` 死亡段经核对已由 TP-01/03 落地，本包未改动任何冻结签名 | TP-11（FR-C-06）实现需要 | P1 |
+| 2026-08-02 | TP-12 新增 `scenes/main/hud.*` / `main_menu.*` / `world_map_panel.*` / `pause_menu.*`（场景层，不属冻结面）：HUD 三条数值条纯信号驱动（无 `_process` 轮询）+ 低氧闪烁；主菜单三个门托管地图页；13 热区全部按 worldmap.json 构建；Esc 暂停菜单（`pause_toggled` 信号；`get_tree().paused` 由 world/ui_manager 统一裁决，§8）。场景路径约定：`world.tscn` / `academy.tscn` / `codex_panel.tscn` 为三个门的导航目标。未改动 §2..§7 任何签名 | TP-12（FR-C-07/C-08、FR-U-03）实现需要 | P1 |
+| 2026-08-02 | TP-13 新增 `scenes/mentor/`（场景层，不属冻结面）：`academy.*`（四房间 + ZoneTrigger）、`mentor_npc.*`（§5 三方法，`prompt_ask`）、`chat_panel.*`（世界不暂停、逐字打字、idle/talk 切换；打字速度常量 `DEFAULT_TYPING_SPEED=40` 字/秒锚本文件常量区，测试经公共变量 `typing_chars_per_second` 调快）、`mentor_registry.gd` / `mentor_art.gd`（纯逻辑/加载辅助，立绘缺失时确定性纯色占位）。输入先过 `LLMClient.sanitize_input`，LLM 文本只做 Label 渲染。未改动 §2..§7 任何签名 | TP-13（FR-M-01/M-02）实现需要 | P1 |
+| 2026-08-02 | TP-16 新增 `scenes/ui/codex_*`（场景层，不属冻结面）：`codex_panel.*`（网格自 `RecipeDB.all_substances()` 得出不写死 17、`set_discovery()` 注入口、循环翻页空态安全）、`codex_cell.*`（未收集剪影着色 + `codex_locked` 占位不泄露真名/化学式；icon 缺失时 id 散列稳定色占位）。未改动 §2..§7 任何签名 | TP-16（FR-U-04）实现需要 | P1 |
+| 2026-08-02 | 主 Agent 集成补记（本批 7 包并行收敛后）：①`player.gd` 补 `var inventory` / `var item_effects` 挂载点 + `get_equipped_item_ids()` + `add_to_group("player")`（TP-09/TP-10 报告的集成缺口，场景层非冻结面）；②SPEC-05 §9 新增 8 个 ui_strings 键（`hud_day`/`hud_night`/`pause_title`/`pause_continue`/`pause_to_menu`/`menu_map`/`chat_send`/`chat_close`），替换 hud/pause_menu/chat_panel 的英文/ASCII 占位文案，`validate_data.gd` 的 `UI_STRING_KEYS` 白名单同步。未改动 §2..§7 任何签名 | 7 包交付报告中的文案缺口与玩家侧接线缺口，归 P1 裁决项 | P1 |

@@ -107,11 +107,15 @@
 [
   { "id": "fail_physical_mix", "reason": "no_match", "text": "没有新物质生成——这只是物理混合，不是化学反应" },
   { "id": "fail_no_product",   "reason": "no_match", "text": "没有生成沉淀、气体或水，所以不反应" },
-  { "id": "fail_condition",    "reason": "wrong_condition", "text": "条件不够——有些反应需要点燃、加热、通电或催化剂" }
+  { "id": "fail_condition",    "reason": "wrong_condition", "text": "条件不够——有些反应需要点燃、加热、通电或催化剂" },
+  { "id": "fail_wrong_tool",   "reason": "wrong_condition", "text": "器材不对——便携格、酒精灯、实验台和电解器能做的反应各不相同" }
 ]
 ```
 
-约束：`reason` 取 `no_match/wrong_condition`；同 reason 至少两条时按轮换取用（FR-G-07 AC2）。
+约束：
+- `reason` 取 `no_match/wrong_condition`；id 唯一，`fail_` 前缀。
+- **每个 reason 池至少 2 条**（硬约束，2026-08-02 补）：`try_craft` 按 reason 做确定性轮转取用，池内只有 1 条时 FR-G-07 AC2「连续两次同类失败文案不同」不可满足。判定口径见 [SPEC-01 FR-G-07](SPEC-01-需求与验收.md)。
+- 这些 id **不进 `tips.json`**（失败池与 47 条字幕表互不重叠）；显示时由调用方 `RecipeDB.get_fail_message(id)` 取 text 再走 `KnowledgeTip.show_custom()`。
 
 ---
 
@@ -174,9 +178,34 @@
 | `route_class` | String | ✅ | `chemistry/dispatch/planning/thinking`（仅供查阅，实际调度由班主任逻辑执行） |
 | `catchphrases` | Array[String] | ⬜ | 口头禅（离线模式拼接用） |
 | `system_prompt` | String | ✅ | 人设段，运行时后接通用后缀（§6） |
+| `mention` | String | ✅ | @ 句柄（**不含 `@`**），如 `化学老师`；唯一 |
+| `dispatch` | Array[Dictionary] | ⬜ | **仅 `monitor` 有**：班主任调度表，见下 |
+
+`mention` 于 2026-08-02 补入：`title` 不能当 @ 句柄——`think` 的 `title` 是「实用思维老师」，
+而 [SPEC-05 §4.1/§4.3](SPEC-05-内容数据表.md) 与 `monitor.system_prompt` 一致使用 `@思维老师`，
+用 `"@" + title` 匹配永远落空。`parse_mentions()`（[SPEC-03 §6.1](SPEC-03-系统与接口契约.md)）
+以本字段做 `@句柄 → 导师 id` 的映射，句柄集合因此是数据而非代码常量。
+四条取值：`化学老师` / `班主任` / `助理` / `思维老师`。
+
+`monitor.dispatch` 每项字段（2026-08-02 补入，理由见 [SPEC-01 FR-M-04 判定口径](SPEC-01-需求与验收.md)）：
+
+| 字段 | 类型 | 必填 | 约束 |
+|---|---|---|---|
+| `category` | String | ✅ | 枚举 `combat/learning/chemistry/other`，唯一 |
+| `keywords` | Array[String] | ✅ | 命中即归此类；`other` 是兜底故为空数组 |
+| `targets` | Array[String] | ✅ | 被派导师 id，1~2 项，均须在本表存在且不为 `monitor` |
+| `line` | String | ✅ | 离线调度语模板（[SPEC-05 §4.3](SPEC-05-内容数据表.md)），须含每个 target 的 `@` + 其 `mention` |
+
+**数组顺序即分类优先级**（`combat` → `learning` → `chemistry` → `other`），
+分类器按序取首个命中项，优先级因此是数据而非代码常量。
 
 校验规则：
 - 恰好 4 条，id 集合等于 `{chem, monitor, assistant, think}`。
+- `monitor` 必须有 `dispatch`，恰好 4 项，`category` 覆盖四类且顺序为 `combat/learning/chemistry/other`；非 `monitor` 不得有 `dispatch`。
+- 每项 `targets` 非空且 ≤2 项、id 存在、不含 `monitor`；`learning` 恰好 2 项。
+- 每项 `line` 非空，且对每个 target 都含 `"@" + 该导师 mention`。
+- 除 `other` 外每项 `keywords` 非空。
+- `mention` 四条齐全、非空、互不相同，且**不以 `@` 开头**。
 - `monitor` 的 prompt 必须包含调度规则关键字（`@化学老师`、`@思维老师`、`@助理`）。
 - **非 monitor 的三位 prompt 必须包含"绝不出现 @"约束**（FR-M-06 AC2，可自动断言）。
 - 代码中不得出现任何 prompt 文本（grep 断言）。
@@ -214,18 +243,20 @@
 | 字段 | 类型 | 必填 | 约束 |
 |---|---|---|---|
 | `id` | String | ✅ | 唯一 |
-| `keywords` | Array[String] | ✅ | ≥1 项，非空字符串 |
+| `keywords` | Array[String] | ✅ | ≥1 项，非空字符串；**唯一例外是兜底行**（见下） |
 | `mentor_id` | String | ⬜ | 缺省 `chem`；用于离线时选立绘与语气 |
 | `answer` | String | ✅ | 非空；涉及反应必须含方程式 |
 
+**兜底行**：表中必须有且只有一行 `keywords` 为空数组，它就是零命中话术（[SPEC-05 §5](SPEC-05-内容数据表.md) 末，`mentor_id: monitor`）。空 `keywords` 永不参与包含匹配，所以它只在零命中时被取用。此约定与 `mentors.json` 的 `dispatch` 兜底类一致（[§5](#5-mentorsjson4-条--fr-d-04)：`other` 的 `keywords` 也为空），零命中话术因而**不必硬编码进代码**（NFR-04）。
+
 匹配规则（**UT-M09 逐条断言**）：
-1. 对问题文本做包含匹配，统计命中的 keyword 数量。
+1. 对问题文本做包含匹配，统计命中的 keyword 数量（兜底行 `keywords` 为空，命中数恒为 0）。
 2. 取命中数最多者。
 3. **平票取表中先出现者**（结果确定可复现，不用随机）。
-4. 零命中 → 返回班主任零命中话术（[SPEC-05 §5](SPEC-05-内容数据表.md)）。
+4. 零命中 → 返回兜底行的 `answer`（即班主任零命中话术）。
 5. 「（离线模式）」后缀由调用方追加，不写进 `answer`。
 
-校验规则：条目数 ≥20；无重复 id；`keywords` 与 `answer` 非空。
+校验规则：条目数 ≥20；无重复 id；`answer` 非空；恰好一行 `keywords` 为空（兜底行），其余行 `keywords` ≥1 项且无空字符串。
 
 ---
 
@@ -402,7 +433,7 @@
 | 6 | 资源路径存在 | 表名 + id + 路径 |
 | 7 | 条数约束（substances 17 且计数集合 16 / recipes 11 / mentors 4 / worldmap 13 且 5 解锁 / qa ≥20） | 表名 + 期望 + 实际 |
 | 8 | 配方三元组无歧义 | 冲突的两个 recipe id |
-| 9 | monitor prompt 含调度关键字；其余三位含"绝不出现 @" | 导师 id |
+| 9 | monitor prompt 含调度关键字；其余三位含"绝不出现 @"；`mention` 四条唯一非空；`monitor.dispatch` 四类齐全有序、`targets` 合法、`line` 含各 target 的 `@mention` | 导师 id + 字段名 |
 | 10 | `ui_strings.json` 覆盖 [SPEC-05 §9](SPEC-05-内容数据表.md) 全部 key，占位符仅 `{n}` | 缺失/非法的 key |
 
 行为：全部通过退出码 0 并打印 `DATA OK`；任一失败退出码 1 并逐条列出问题（FR-D-07 AC2）。
