@@ -1,0 +1,92 @@
+[
+  {
+    "id": "sulfur_torch",
+    "name": "硫火把",
+    "type": "equip",
+    "icon": "res://assets/art/icons/sulfur_torch.png",
+    "effect": "light",
+    "effect_value_key": "daynight.torch_view_radius",
+    "consumable": false,
+    "tip_id": "warn_night"
+  },
+  {
+    "id": "neutral_spray",
+    "name": "中和喷雾",
+    "type": "consume",
+    "icon": "res://assets/art/icons/neutral_spray.png",
+    "effect": "kill_acid",
+    "effect_value_key": "",
+    "consumable": true,
+    "tip_id": "sys_spray"
+  },
+  {
+    "id": "activated_carbon",
+    "name": "活性炭",
+    "type": "consume",
+    "icon": "res://assets/art/icons/activated_carbon.png",
+    "effect": "kill_co",
+    "effect_value_key": "",
+    "consumable": true,
+    "tip_id": "sys_carbon"
+  },
+  {
+    "id": "extinguisher",
+    "name": "灭火器",
+    "type": "consume",
+    "icon": "res://assets/art/icons/extinguisher.png",
+    "effect": "extinguish",
+    "effect_value_key": "",
+    "consumable": true,
+    "tip_id": ""
+  },
+  {
+    "id": "oxygen_tank",
+    "name": "氧气瓶",
+    "type": "consume",
+    "icon": "res://assets/art/icons/oxygen_tank.png",
+    "effect": "restore_oxygen",
+    "effect_value_key": "items.oxygen_tank_restore",
+    "consumable": true,
+    "tip_id": ""
+  },
+  {
+    "id": "soap_water",
+    "name": "肥皂水",
+    "type": "consume",
+    "icon": "res://assets/art/icons/soap_water.png",
+    "effect": "test_hardwater",
+    "effect_value_key": "",
+    "consumable": true,
+    "tip_id": "sys_hardwater"
+  },
+  {
+    "id": "stick",
+    "name": "木棒",
+    "type": "material",
+    "icon": "res://assets/art/icons/stick.png",
+    "effect": "none",
+    "effect_value_key": "",
+    "consumable": false,
+    "tip_id": ""
+  },
+  {
+    "id": "cu",
+    "name": "铜",
+    "type": "material",
+    "icon": "res://assets/art/icons/cu.png",
+    "effect": "none",
+    "effect_value_key": "",
+    "consumable": false,
+    "tip_id": ""
+  },
+  {
+    "id": "nahco3",
+    "name": "碳酸氢钠",
+    "type": "material",
+    "icon": "res://assets/art/icons/nahco3.png",
+    "effect": "none",
+    "effect_value_key": "",
+    "consumable": false,
+    "tip_id": ""
+  }
+]

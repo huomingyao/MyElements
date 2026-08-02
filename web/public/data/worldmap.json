@@ -1,0 +1,15 @@
+[
+  { "id": "grassland", "name": "草原", "unlocked": true, "brief": "出生地。空气中氮气约 78%、氧气约 21%。", "teaser": "", "hotspot": { "x": 96, "y": 200, "w": 80, "h": 56 } },
+  { "id": "camp", "name": "营地", "unlocked": true, "brief": "炼金术士的家。过滤器、电解器、合成台、篝火、床都在这儿。", "teaser": "", "hotspot": { "x": 200, "y": 220, "w": 80, "h": 56 } },
+  { "id": "saltlake", "name": "盐湖", "unlocked": true, "brief": "安全的收集区。湖水是硬水，湖边有粗盐结晶。", "teaser": "", "hotspot": { "x": 30, "y": 170, "w": 80, "h": 56 } },
+  { "id": "mine", "name": "矿洞一层", "unlocked": true, "brief": "氧气稀薄、光线昏暗，硫与矿石都在这里。小心 CO 幽灵。", "teaser": "", "hotspot": { "x": 320, "y": 240, "w": 80, "h": 56 } },
+  { "id": "academy", "name": "导师学院", "unlocked": true, "brief": "四位导师常驻的安全区。不懂就问，这里没有笨问题。", "teaser": "", "hotspot": { "x": 280, "y": 90, "w": 88, "h": 60 } },
+  { "id": "deep_mine", "name": "深层矿洞", "unlocked": false, "brief": "", "teaser": "氧气趋近于零的深处，有紫色晶体在发光……", "hotspot": { "x": 400, "y": 260, "w": 80, "h": 56 } },
+  { "id": "volcano", "name": "火山口·熔炉高地", "unlocked": false, "brief": "", "teaser": "高炉轰鸣，铁水奔流——石灰三角与工业炼铁之地", "hotspot": { "x": 520, "y": 240, "w": 80, "h": 56 } },
+  { "id": "metal_mountain", "name": "金属矿山", "unlocked": false, "brief": "", "teaser": "活动性石碑矗立山中，能置换者生，不能者败", "hotspot": { "x": 480, "y": 130, "w": 80, "h": 56 } },
+  { "id": "acid_swamp", "name": "酸碱沼泽", "unlocked": false, "brief": "", "teaser": "石蕊之门后，pH 是唯一的通行证", "hotspot": { "x": 120, "y": 300, "w": 80, "h": 56 } },
+  { "id": "crystal_cave", "name": "水晶矿洞", "unlocked": false, "brief": "", "teaser": "沉淀与结晶的迷宫，无色溶液等你鉴别", "hotspot": { "x": 240, "y": 296, "w": 80, "h": 56 } },
+  { "id": "air_realm", "name": "气之国", "unlocked": false, "brief": "", "teaser": "漂浮在氮与氧之间的国度，燃烧在这里有不同的法则", "hotspot": { "x": 420, "y": 40, "w": 80, "h": 56 } },
+  { "id": "life_plain", "name": "生命草原", "unlocked": false, "brief": "", "teaser": "有机物与化肥的田野，种下知识收获葡萄糖", "hotspot": { "x": 30, "y": 60, "w": 80, "h": 56 } },
+  { "id": "electro_lab", "name": "电解实验室", "unlocked": false, "brief": "", "teaser": "高压与催化剂之地，水在这里一分为二", "hotspot": { "x": 540, "y": 90, "w": 80, "h": 56 } }
+]
