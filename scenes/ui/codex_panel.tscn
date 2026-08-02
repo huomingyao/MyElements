@@ -10,7 +10,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 script = ExtResource("1_panel")
 
-[node name="Box" type="VBoxContainer" parent="."]
+[node name="Scroll" type="ScrollContainer" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -19,52 +19,57 @@ offset_left = 12.0
 offset_top = 12.0
 offset_right = -12.0
 offset_bottom = -12.0
+horizontal_scroll_mode = 0
 
-[node name="Grid" type="GridContainer" parent="Box"]
+[node name="Box" type="VBoxContainer" parent="Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Grid" type="GridContainer" parent="Scroll/Box"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="CardArea" type="VBoxContainer" parent="Box"]
+[node name="CardArea" type="VBoxContainer" parent="Scroll/Box"]
 layout_mode = 2
 
-[node name="CardTitle" type="Label" parent="Box/CardArea"]
+[node name="CardTitle" type="Label" parent="Scroll/Box/CardArea"]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="CardEquation" type="Label" parent="Box/CardArea"]
+[node name="CardEquation" type="Label" parent="Scroll/Box/CardArea"]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="CardBody" type="Label" parent="Box/CardArea"]
-unique_name_in_owner = true
-layout_mode = 2
-autowrap_mode = 2
-
-[node name="CardApplication" type="Label" parent="Box/CardArea"]
+[node name="CardBody" type="Label" parent="Scroll/Box/CardArea"]
 unique_name_in_owner = true
 layout_mode = 2
 autowrap_mode = 2
 
-[node name="CardFooter" type="Label" parent="Box/CardArea"]
+[node name="CardApplication" type="Label" parent="Scroll/Box/CardArea"]
+unique_name_in_owner = true
+layout_mode = 2
+autowrap_mode = 2
+
+[node name="CardFooter" type="Label" parent="Scroll/Box/CardArea"]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="CardNav" type="HBoxContainer" parent="Box/CardArea"]
+[node name="CardNav" type="HBoxContainer" parent="Scroll/Box/CardArea"]
 layout_mode = 2
 
-[node name="PrevCardButton" type="Button" parent="Box/CardArea/CardNav"]
+[node name="PrevCardButton" type="Button" parent="Scroll/Box/CardArea/CardNav"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "<"
 
-[node name="CardPageLabel" type="Label" parent="Box/CardArea/CardNav"]
+[node name="CardPageLabel" type="Label" parent="Scroll/Box/CardArea/CardNav"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 horizontal_alignment = 1
 
-[node name="NextCardButton" type="Button" parent="Box/CardArea/CardNav"]
+[node name="NextCardButton" type="Button" parent="Scroll/Box/CardArea/CardNav"]
 unique_name_in_owner = true
 layout_mode = 2
 text = ">"

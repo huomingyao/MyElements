@@ -1,10 +1,10 @@
 # UT-D03 / FR-D-03：tips.json id 唯一、style 枚举、文案非空、SPEC-05 §3 列出的每个 id 都存在。
-# 断言依据：SPEC-04 §4 校验规则 + SPEC-05 §3 内容表（51 条）。
+# 断言依据：SPEC-04 §4 校验规则 + SPEC-05 §3 内容表（53 条）。
 extends GutTest
 
 const Fixture: GDScript = preload("res://tests/data/json_fixture.gd")
 
-const EXPECTED_COUNT: int = 51
+const EXPECTED_COUNT: int = 53
 const STYLES: Array[String] = ["bubble", "banner", "warning"]
 const STYLE_DURATIONS: Dictionary = {"bubble": 3.0, "banner": 4.0, "warning": 5.0}
 
@@ -41,6 +41,7 @@ const SPEC_SYS_TIPS: Dictionary = {
 	"sys_trade_done": "原住民收下了装备，塞给你一份干粮——能量 +20",
 	"sys_trade_empty": "原住民摆摆手：这件我不要——他只收人造的装备",
 	"tip_mass_conservation": "反应前后原子种类和数目不变——质量守恒定律",
+	"sys_inventory_full": "背包满了——同种物质会堆叠在同一格，先合成或用掉一些吧",
 }
 
 # SPEC-05 §3.3 警示（style: warning，5 秒）
@@ -90,9 +91,9 @@ func before_each() -> void:
 		_by_id[str(row.get("id", ""))] = row
 
 
-# SPEC-05 §3 结语：7（区域）+ 20（机制，含 sys_oxygen_tutorial）+ 6（警示）+ 1（卡片底行）+ 17（物质）= 51 条。
+# SPEC-05 §3 结语：7（区域）+ 22（机制，含 sys_oxygen_tutorial、sys_inventory_full 与 sys_no_target）+ 6（警示）+ 1（卡片底行）+ 17（物质）= 53 条。
 func test_tip_count_is_fifty_one() -> void:
-	assert_eq(_rows.size(), EXPECTED_COUNT, "tips.json 必须恰好 51 条（SPEC-05 §3 合计）")
+	assert_eq(_rows.size(), EXPECTED_COUNT, "tips.json 必须恰好 53 条（SPEC-05 §3 合计）")
 
 
 # SPEC-05 §3.2 补记：sys_oxygen_tutorial 为 once 横幅（FR-U-02 AC2，氧气 70 首次教程）。

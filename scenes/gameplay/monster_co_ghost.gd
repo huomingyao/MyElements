@@ -52,6 +52,7 @@ var _destroyed: bool = false
 @onready var _eye_l: Polygon2D = %EyeL
 @onready var _eye_r: Polygon2D = %EyeR
 @onready var _glow: Polygon2D = %Glow
+@onready var _anim_sprite: AnimatedSprite2D = %AnimSprite
 
 
 func _ready() -> void:
@@ -117,6 +118,9 @@ func drift_step(delta: float, target_pos: Vector2) -> void:
 	var to_target: Vector2 = target_pos - global_position
 	if to_target.is_zero_approx():
 		return
+	# 贴图朝右为基准，向左飘时水平翻转。
+	if _anim_sprite != null:
+		_anim_sprite.flip_h = to_target.x < 0.0
 	global_position += to_target.normalized() * minf(drift_speed() * delta, to_target.length())
 
 

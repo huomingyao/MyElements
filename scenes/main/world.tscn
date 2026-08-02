@@ -33,10 +33,10 @@
 size = Vector2(1000, 120)
 
 [sub_resource type="RectangleShape2D" id="zone_grassland"]
-size = Vector2(550, 120)
+size = Vector2(1000, 120)
 
 [sub_resource type="RectangleShape2D" id="zone_camp"]
-size = Vector2(830, 120)
+size = Vector2(1000, 120)
 
 [sub_resource type="RectangleShape2D" id="zone_mine"]
 size = Vector2(1000, 120)
@@ -50,7 +50,7 @@ script = ExtResource("1_world")
 [node name="Map" parent="." instance=ExtResource("10_map")]
 
 [node name="Player" parent="." instance=ExtResource("11_player")]
-position = Vector2(-400, -20)
+position = Vector2(-340, -20)
 
 [node name="ZoneTriggers" type="Node2D" parent="."]
 
@@ -63,7 +63,7 @@ zone_id = "saltlake"
 shape = SubResource("zone_saltlake")
 
 [node name="GrasslandTrigger" type="Area2D" parent="ZoneTriggers"]
-position = Vector2(-425, -20)
+position = Vector2(-140, -20)
 script = ExtResource("2_zone")
 zone_id = "grassland"
 
@@ -71,7 +71,7 @@ zone_id = "grassland"
 shape = SubResource("zone_grassland")
 
 [node name="CampTrigger" type="Area2D" parent="ZoneTriggers"]
-position = Vector2(985, -20)
+position = Vector2(920, -20)
 script = ExtResource("2_zone")
 zone_id = "camp"
 
@@ -79,7 +79,7 @@ zone_id = "camp"
 shape = SubResource("zone_camp")
 
 [node name="MineTrigger" type="Area2D" parent="ZoneTriggers"]
-position = Vector2(1900, -20)
+position = Vector2(1980, -20)
 script = ExtResource("2_zone")
 zone_id = "mine"
 
@@ -87,7 +87,7 @@ zone_id = "mine"
 shape = SubResource("zone_mine")
 
 [node name="RiverTrigger" type="Area2D" parent="ZoneTriggers"]
-position = Vector2(750, -20)
+position = Vector2(570, -20)
 script = ExtResource("2_zone")
 tip_id = "zone_river"
 
@@ -99,70 +99,63 @@ shape = SubResource("zone_river")
 [node name="Facilities" type="Node2D" parent="."]
 
 [node name="FacilityLakeWater" parent="Facilities" instance=ExtResource("13_lake")]
-position = Vector2(750, -16)
+position = Vector2(570, -16)
 
 [node name="FacilityFilter" parent="Facilities" instance=ExtResource("14_filter")]
-position = Vector2(880, -16)
+position = Vector2(700, -16)
 
 [node name="FacilityElectrolyzer" parent="Facilities" instance=ExtResource("15_elec")]
-position = Vector2(960, -16)
+position = Vector2(780, -16)
 
 [node name="FacilityBench" parent="Facilities" instance=ExtResource("16_bench")]
-position = Vector2(1050, -16)
+position = Vector2(870, -16)
 
 [node name="FacilityCampfire" parent="Facilities" instance=ExtResource("17_fire")]
-position = Vector2(1150, -16)
+position = Vector2(970, -16)
 
 [node name="FacilityBed" parent="Facilities" instance=ExtResource("18_bed")]
-position = Vector2(1240, -16)
+position = Vector2(1060, -16)
 
 [node name="NativeTrader" parent="Facilities" instance=ExtResource("30_trader")]
-position = Vector2(1320, -16)
+position = Vector2(1140, -16)
 
 [node name="FacilitySignpost" parent="Facilities" instance=ExtResource("31_signpost")]
-position = Vector2(1400, -16)
+position = Vector2(1220, -16)
 
 [node name="Monsters" type="Node2D" parent="."]
 
 [node name="CoGhostA" parent="Monsters" instance=ExtResource("12_ghost")]
-position = Vector2(1550, -30)
+position = Vector2(1630, -30)
 
 [node name="CoGhostB" parent="Monsters" instance=ExtResource("12_ghost")]
-position = Vector2(2000, -30)
+position = Vector2(2080, -30)
 
 [node name="MistSpawner" type="Node2D" parent="Monsters"]
 script = ExtResource("3_spawner")
 
 [node name="Cuso4Pool" parent="." instance=ExtResource("32_cuso4pool")]
-position = Vector2(1720, -20)
+position = Vector2(1800, -20)
 
 [node name="BlackHoles" type="Node2D" parent="."]
 
 [node name="HoleSaltlakeGrassland" parent="BlackHoles" instance=ExtResource("33_hole")]
-position = Vector2(-700, 0)
-west_target = Vector2(-770, 0)
-east_target = Vector2(-630, 0)
+position = Vector2(-670, 0)
+west_target = Vector2(-740, 0)
+east_target = Vector2(-600, 0)
 west_zone = "saltlake"
 east_zone = "grassland"
 
-[node name="HoleGrasslandCampWest" parent="BlackHoles" instance=ExtResource("33_hole")]
-position = Vector2(-150, 0)
-west_target = Vector2(-210, 0)
-east_target = Vector2(640, 0)
-west_zone = "grassland"
-east_zone = "camp"
-
-[node name="HoleGrasslandCampEast" parent="BlackHoles" instance=ExtResource("33_hole")]
-position = Vector2(600, 0)
-west_target = Vector2(-210, 0)
-east_target = Vector2(640, 0)
+[node name="HoleGrasslandCamp" parent="BlackHoles" instance=ExtResource("33_hole")]
+position = Vector2(390, 0)
+west_target = Vector2(320, 0)
+east_target = Vector2(460, 0)
 west_zone = "grassland"
 east_zone = "camp"
 
 [node name="HoleCampMine" parent="BlackHoles" instance=ExtResource("33_hole")]
-position = Vector2(1375, 0)
-west_target = Vector2(1310, 0)
-east_target = Vector2(1440, 0)
+position = Vector2(1450, 0)
+west_target = Vector2(1380, 0)
+east_target = Vector2(1520, 0)
 west_zone = "camp"
 east_zone = "mine"
 

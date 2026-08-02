@@ -16,10 +16,20 @@ const DISCOVERY_SCRIPT: String = "res://scripts/gameplay/discovery.gd"
 const HYDROGEN_SCRIPT: String = "res://scripts/gameplay/hydrogen_event.gd"
 
 # 白盒布局锚点（配合 maps/whitebox_map.tscn；铺图定稿后由 P5 校准）。
-const PLAYER_SPAWN: Vector2 = Vector2(-400, -20)
-const MAP_BOUNDS: Rect2 = Rect2(-1700, -300, 4100, 400)
-const CAMP_CENTER: Vector2 = Vector2(1000, -20)
-const GRASS_GHOST_SPAWN: Vector2 = Vector2(-400, -30)
+# 2026-08-03 等宽重排：四区画布统一 1000px 宽紧凑排列，区间 60px 缝隙由隐形触发器封住。
+const PLAYER_SPAWN: Vector2 = Vector2(-340, -20)
+const MAP_BOUNDS: Rect2 = Rect2(-1700, -300, 4180, 400)
+const CAMP_CENTER: Vector2 = Vector2(820, -20)
+const GRASS_GHOST_SPAWN: Vector2 = Vector2(-340, -30)
+
+# FR-C-10 AC1/AC2：相机按区域钳制（四区等宽 1000 ≥640 视口，屏幕恒被当前区画布铺满），
+# zone_changed 即切换；两侧不露黑边、看不到相邻区域。缺省区域回退 MAP_BOUNDS。
+const ZONE_CAMERA_BOUNDS: Dictionary = {
+	"saltlake": Rect2(-1700, -300, 1000, 400),
+	"grassland": Rect2(-640, -300, 1000, 400),
+	"camp": Rect2(420, -300, 1000, 400),
+	"mine": Rect2(1480, -300, 1000, 400),
+}
 
 const BAL_NIGHT_BRIGHTNESS: String = "daynight.night_brightness"
 const FALLBACK_NIGHT_BRIGHTNESS: float = 0.35
@@ -53,6 +63,8 @@ var _hydrogen: RefCounted = null
 var _grass_ghost: Node2D = null
 var _tint_tween: Tween = null
 var _last_health: float = 0.0
+# FR-C-10 AC3：黑洞过场（渐黑~渐亮）期间锁输入，travel_started/traveled 成对驱动。
+var _travel_lock: bool = false
 
 @onready var _player: Node2D = $Player
 @onready var _collectables: Node2D = $Collectables
@@ -120,7 +132,7 @@ func _setup_player() -> void:
 	_player.item_effects = _item_effects
 	_player.global_position = PLAYER_SPAWN
 	_player.reset_camera_smoothing() # 包A-4：出生点传送后相机立即对齐，不慢追
-	_player.set_map_bounds(MAP_BOUNDS)
+	_player.set_map_bounds(_zone_camera_bounds(ZONE_GRASSLAND)) # FR-C-10：出生钳到草原
 	_tip_layer.set_player(_player)
 	var explosion: Node = get_node_or_null(^"Explosion")
 	if explosion != null:
@@ -249,6 +261,14 @@ func _connect_signals() -> void:
 	var pause: Node = get_node_or_null(^"UILayer/PauseMenu")
 	if pause != null:
 		pause.pause_toggled.connect(_on_pause_toggled)
+	# FR-C-10 AC3：黑洞过场锁输入（travel_started 渐黑开始锁，traveled 渐亮结束解锁）。
+	var holes: Node = get_node_or_null(^"BlackHoles")
+	if holes != null:
+		for hole: Node in holes.get_children():
+			if hole.has_signal("travel_started"):
+				hole.travel_started.connect(_on_travel_started)
+			if hole.has_signal("traveled"):
+				hole.traveled.connect(_on_traveled)
 
 
 func _on_substance_discovered(_substance_id: String) -> void:
@@ -288,7 +308,12 @@ func _on_day_started(_day_count: int) -> void:
 
 # 区域联动字幕：进矿洞且氧气净速率为负时提示通风原理（SPEC-02 §4.1）；
 # 草原白天首次进入时触发光合作用横幅（SPEC-05 §3.1，夜晚不触发）。均走 show_once 去重。
+# FR-C-10 AC1：切区即切换相机钳制矩形，触碰边界黑洞前看不到相邻区域。
+# 同时收敛相机平滑：复活回床等跨区传送后旧钳制会把相机夹在目标区外，
+# 切区时不同步 snap 的话相机会从错误夹位慢滑回玩家。
 func _on_zone_changed(zone_id: String) -> void:
+	_player.set_map_bounds(_zone_camera_bounds(zone_id))
+	_player.reset_camera_smoothing()
 	var tip: Node = get_node_or_null(^"/root/KnowledgeTip")
 	if tip == null:
 		return
@@ -297,6 +322,10 @@ func _on_zone_changed(zone_id: String) -> void:
 		tip.show_once(TIP_MINE_BREATH)
 	if zone_id == ZONE_GRASSLAND and gm != null and not bool(gm.is_night()):
 		tip.show_once(TIP_PHOTOSYNTHESIS)
+
+
+func _zone_camera_bounds(zone_id: String) -> Rect2:
+	return ZONE_CAMERA_BOUNDS.get(zone_id, MAP_BOUNDS)
 
 
 func _tween_tint(brightness: float) -> void:
@@ -334,6 +363,18 @@ func _on_ui_active_changed(_active: String) -> void:
 	_sync_input_block()
 
 
+# 黑洞过场开始（渐黑）：锁输入，防止过场中走出落点或穿帮。
+func _on_travel_started() -> void:
+	_travel_lock = true
+	_sync_input_block()
+
+
+# 黑洞过场结束（渐亮完）：解锁。落点 ZoneTrigger 已负责切区与相机钳制。
+func _on_traveled(_from_zone: String, _to_zone: String) -> void:
+	_travel_lock = false
+	_sync_input_block()
+
+
 # 包A-1：暂停菜单真暂停——菜单开关即场景树开关（三值 tick、怪物随之停住）；
 # 菜单本体 process_mode=ALWAYS（pause_menu.tscn），暂停后按钮仍可用。
 func _on_pause_toggled(open: bool) -> void:
@@ -360,9 +401,9 @@ func _shake_camera(intensity: float, duration: float) -> void:
 		camera.shake(intensity, duration)
 
 
-# 屏蔽输入的合取：模态面板（ui_manager）、卡片弹窗、世界地图页、暂停菜单、死亡画面。
+# 屏蔽输入的合取：模态面板（ui_manager）、卡片弹窗、世界地图页、暂停菜单、死亡画面、黑洞过场。
 func _sync_input_block() -> void:
-	var blocked: bool = _ui_manager.input_blocked() or _card.is_open()
+	var blocked: bool = _ui_manager.input_blocked() or _card.is_open() or _travel_lock
 	var wm: Node = get_node_or_null(^"/root/WorldMap")
 	if wm != null and bool(wm.is_open()):
 		blocked = true
@@ -403,6 +444,9 @@ func _unhandled_input(event: InputEvent) -> void:
 
 # 数字键使用快捷栏第 N 格（FR-G-12 接线）：交易态下路由给原住民（FR-G-15）；
 # 装备型切换装备，消耗型结算效果（砸怪类自动找范围内目标）。
+# 砸空反馈：use_item 返回 no_target 时播 sys_no_target（修复：返回值曾被丢弃，按键零反馈）。
+const TIP_NO_TARGET: String = "sys_no_target"
+
 func _use_hotbar_slot(index: int) -> void:
 	if _inventory == null or _item_effects == null:
 		return
@@ -423,7 +467,11 @@ func _use_hotbar_slot(index: int) -> void:
 			_item_effects.equip(item_id)
 		_player.set_torch_equipped(bool(_item_effects.is_equipped(TORCH_ITEM_ID)))
 		return
-	_item_effects.use_item(item_id, _inventory, _nearest_target_for(item_id))
+	var result: Dictionary = _item_effects.use_item(item_id, _inventory, _nearest_target_for(item_id))
+	if not bool(result.get("success", false)) and str(result.get("reason", "")) == "no_target":
+		var tip: Node = get_node_or_null(^"/root/KnowledgeTip")
+		if tip != null:
+			tip.show(TIP_NO_TARGET)
 
 
 # 砸怪类道具的目标：按效果找范围内最近的可消灭对象（kill_acid→酸雾怪，kill_co→CO 幽灵）。
@@ -438,16 +486,24 @@ func _nearest_target_for(item_id: String) -> Node:
 	var method: String = str(EFFECT_TARGET_METHODS.get(str(item.get("effect", "")), ""))
 	if method.is_empty():
 		return null
+	# 递归收集：酸雾怪挂在 MistSpawner 下（孙节点），只看直接子节点会永远找不到喷雾目标。
+	var candidates: Array = []
+	_collect_target_candidates(_monsters, method, candidates)
 	var best: Node = null
 	var best_dist: float = SPRAY_TARGET_RANGE
-	for child: Node in _monsters.get_children():
-		if not child.has_method(method):
-			continue
+	for child: Node in candidates:
 		var dist: float = (child as Node2D).global_position.distance_to(_player.global_position)
 		if dist <= best_dist:
 			best_dist = dist
 			best = child
 	return best
+
+
+func _collect_target_candidates(node: Node, method: String, out: Array) -> void:
+	for child: Node in node.get_children():
+		if child.has_method(method):
+			out.append(child)
+		_collect_target_candidates(child, method, out)
 
 
 func _gm() -> Node:

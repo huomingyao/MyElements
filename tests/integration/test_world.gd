@@ -386,13 +386,13 @@ func test_mentor_room_registered_as_modal_panel() -> void:
 func test_black_hole_transports_player_to_next_zone() -> void:
 	if _skip_unless_ready():
 		return
-	_player.global_position = Vector2(-160, -20)
+	_player.global_position = Vector2(370, -20)
 	await wait_physics_frames(3)
-	_player.global_position = Vector2(-151, -60)
+	_player.global_position = Vector2(389, -60)
 	await wait_seconds(1.2)
 	assert_true(
-		_player.global_position.x > 600.0,
-		"触碰草原东缘黑洞应被传送到营地侧：%s" % str(_player.global_position)
+		_player.global_position.x > 420.0,
+		"触碰草原东缘触发器应被传送到营地侧：%s" % str(_player.global_position)
 	)
 	await wait_physics_frames(3)
 	assert_eq(gm.current_zone(), "camp", "传送落点应触发营地切区")
@@ -403,7 +403,7 @@ func test_river_hint_fires_once() -> void:
 	if _skip_unless_ready():
 		return
 	assert_false(tip.is_shown("zone_river"), "开场未触发河边字幕")
-	_player.global_position = Vector2(750, -20)
+	_player.global_position = Vector2(570, -20)
 	await wait_physics_frames(5)
 	# 新语义（包C-3）：入队≠已展示；出生区域横幅可能占着播放位，结算队列后再断言。
 	tip.advance(TIP_FLUSH_SECONDS)
@@ -429,6 +429,51 @@ func test_carbon_thrown_at_ghost_kills_it() -> void:
 	await wait_process_frames(2)
 	assert_eq(inventory.count_of("activated_carbon"), 0, "活性炭用后消耗")
 	assert_true(ghost.is_destroyed() or not is_instance_valid(ghost), "幽灵应被消灭")
+
+
+# 砸空反馈（B 级体验缺口）：范围内无目标时数字键不消耗道具，且播 sys_no_target 字幕；
+# 修复前 use_item 返回结果被丢弃，按键零反馈（不消耗/不提示，玩家以为坏了）。
+func test_hotkey_kill_item_without_target_shows_feedback() -> void:
+	if _skip_unless_ready():
+		return
+	var inventory: RefCounted = _player.get("inventory")
+	inventory.add_item("activated_carbon", 1)
+	# 玩家留在草原出生区域：矿洞幽灵远在 96px 射程外，草原夜晚幽灵白天不刷。
+	var event: InputEventAction = InputEventAction.new()
+	event.action = "use_item_1"
+	event.pressed = true
+	_world._unhandled_input(event)
+	await wait_process_frames(2)
+	assert_eq(inventory.count_of("activated_carbon"), 1, "无目标时不应消耗道具")
+	tip.advance(TIP_FLUSH_SECONDS)
+	assert_true(tip.is_shown("sys_no_target"), "无目标使用砸怪道具应播 sys_no_target 反馈")
+
+
+# 中和喷雾砸酸雾怪接线（FR-G-11 AC3 世界段）：数字键用喷雾消灭范围内酸雾怪。
+# 酸雾怪刷在 MistSpawner 下（_monsters 的孙节点），目标搜索必须递归到它们。
+func test_spray_thrown_at_acid_mist_kills_it() -> void:
+	if _skip_unless_ready():
+		return
+	var spawner: Node = _world.get_node_or_null(^"Monsters/MistSpawner")
+	assert_not_null(spawner, "应有酸雾怪刷新器")
+	if spawner == null:
+		return
+	var mists: Array = spawner.spawn_night_mists()
+	assert_true(mists.size() > 0, "应刷出酸雾怪")
+	if mists.is_empty():
+		return
+	var mist: Node2D = mists[0] as Node2D
+	var inventory: RefCounted = _player.get("inventory")
+	inventory.add_item("neutral_spray", 1)
+	_player.global_position = mist.global_position + Vector2(30, 0)
+	await wait_process_frames(1)
+	var event: InputEventAction = InputEventAction.new()
+	event.action = "use_item_1"
+	event.pressed = true
+	_world._unhandled_input(event)
+	await wait_process_frames(2)
+	assert_eq(inventory.count_of("neutral_spray"), 0, "中和喷雾用后消耗")
+	assert_true(mist.is_destroyed() or not is_instance_valid(mist), "酸雾怪应被消灭")
 
 
 # 原住民交易接线（FR-G-15 世界段）：E 进交易态 → 数字键卖出装备换能量。
@@ -587,7 +632,9 @@ func test_collectables_stay_at_marker_height() -> void:
 			"采集物 %s 应围绕标记高度漂浮，不被拉回 y=0" % str(child.get("substance_id")))
 
 
-# 包A-4：复活横跨地图传送后相机应立即对齐床边（reset_smoothing），不开平滑慢追。
+# 包A-4：复活横跨地图传送后相机应立即对齐床边区域（reset_smoothing），不开平滑慢追。
+# FR-C-10（2026-08-03）：相机按营地区矩形钳制，床在营地东侧（x=1240）时屏幕中心
+# 只能到钳位点（营地中心域 [920,1030]），断言对齐到钳位点而非床坐标本身。
 func test_camera_snaps_to_bed_after_respawn() -> void:
 	if _skip_unless_ready():
 		return
@@ -604,22 +651,29 @@ func test_camera_snaps_to_bed_after_respawn() -> void:
 	gm.modify_health(-999.0)
 	await wait_process_frames(2)
 	death_screen.confirm()
-	await wait_process_frames(3)
-	assert_almost_eq(cam.get_screen_center_position().x, (bed as Node2D).global_position.x, 60.0,
-		"复活传送后相机应立即对齐床边，而非横跨地图慢追")
+	# 落点 ZoneTrigger 物理检测需数帧才切区（切区时才换钳制并 snap），等足余量。
+	await wait_process_frames(8)
+	var half_view: float = 320.0 # 640 视口半宽
+	var expected_x: float = clampf(
+		(bed as Node2D).global_position.x,
+		ZONE_BOUNDS_CAMP.position.x + half_view,
+		ZONE_BOUNDS_CAMP.end.x - half_view
+	)
+	assert_almost_eq(cam.get_screen_center_position().x, expected_x, 60.0,
+		"复活传送后相机应立即对齐营地钳位点，而非横跨地图慢追")
 
 
-# 2026-08-02 黑洞方案：学院区从世界移除，原学院带（-150..600）由两端黑洞封住不再可达；
-# 营地↔矿洞缝隙由黑洞占据（传送行为见 test_black_hole_transports_player_to_next_zone）。
+# 2026-08-03 等宽重排：四区紧凑排列，原学院缺口带消除；区域触发器完整覆盖各自区
+# （传送行为见 test_black_hole_transports_player_to_next_zone）。
 func test_zone_triggers_cover_former_gaps() -> void:
 	if _skip_unless_ready():
 		return
-	_player.global_position = Vector2(-160.0, -20.0) # 草原东缘落脚
+	_player.global_position = Vector2(-160.0, -20.0) # 草原中部
 	await wait_physics_frames(3)
 	assert_eq(gm.current_zone(), "grassland", "前置：x=-160 应属草原")
-	_player.global_position = Vector2(585.0, -20.0) # 旧缝隙：原学院东缘↔营地西缘
+	_player.global_position = Vector2(585.0, -20.0) # 营地中西部
 	await wait_physics_frames(5)
-	assert_eq(gm.current_zone(), "camp", "原学院↔营地旧缝隙（x=585）应归属营地")
+	assert_eq(gm.current_zone(), "camp", "x=585 应归属营地")
 
 
 # 包A-8：受伤触发相机小幅震动，震动结束 offset 精确复位。
@@ -682,3 +736,83 @@ func test_esc_swallowed_while_death_screen_open() -> void:
 	death_screen.confirm()
 	await wait_process_frames(2)
 	assert_false(death_screen.is_open(), "确认后死亡画面应关闭")
+
+
+# ==== FR-C-10 区域相机钳制与边界幕布（2026-08-03） ====
+
+# 白盒区域相机矩形（与 SPEC-02 §3 区域可视性规则一致；四区等宽 1000、x 钳区域、y 全高）。
+const ZONE_BOUNDS_GRASSLAND: Rect2 = Rect2(-640, -300, 1000, 400)
+const ZONE_BOUNDS_SALTLAKE: Rect2 = Rect2(-1700, -300, 1000, 400)
+const ZONE_BOUNDS_CAMP: Rect2 = Rect2(420, -300, 1000, 400)
+const ZONE_BOUNDS_MINE: Rect2 = Rect2(1480, -300, 1000, 400)
+
+# 四区画布节点名（等宽断言用）。
+const ZONE_BG_NAMES: Array[String] = ["SaltlakeBg", "GrasslandBg", "CampBg", "MineBg"]
+const ZONE_BG_WIDTH: float = 1000.0
+
+
+func _assert_camera_bounds(rect: Rect2, label: String) -> void:
+	var cam: Camera2D = _player.get_node_or_null(^"%Camera") as Camera2D
+	assert_not_null(cam, "玩家应有 %Camera")
+	if cam == null:
+		return
+	assert_eq(cam.limit_left, int(rect.position.x), "%s：limit_left" % label)
+	assert_eq(cam.limit_top, int(rect.position.y), "%s：limit_top" % label)
+	assert_eq(cam.limit_right, int(rect.end.x), "%s：limit_right" % label)
+	assert_eq(cam.limit_bottom, int(rect.end.y), "%s：limit_bottom" % label)
+
+
+# AC1：出生初始相机边界 == 草原矩形（不再用全图 MAP_BOUNDS）。
+func test_camera_initial_bounds_grassland() -> void:
+	if _skip_unless_ready():
+		return
+	_assert_camera_bounds(ZONE_BOUNDS_GRASSLAND, "出生初始")
+
+
+# AC1：zone_changed 即切换相机边界到对应区域矩形。
+func test_zone_change_switches_camera_bounds() -> void:
+	if _skip_unless_ready():
+		return
+	gm.set_zone("mine")
+	await wait_process_frames(1)
+	_assert_camera_bounds(ZONE_BOUNDS_MINE, "切到矿洞")
+	gm.set_zone("saltlake")
+	await wait_process_frames(1)
+	_assert_camera_bounds(ZONE_BOUNDS_SALTLAKE, "切到盐湖")
+
+
+# AC2（v2 等宽画布）：四区背景等宽 1000px（≥640 视口，钳制下屏幕恒被铺满不露黑边），
+# 且不再有幕布节点（窄区消除后幕布方案废弃）。
+func test_zone_backgrounds_uniform_width() -> void:
+	if _skip_unless_ready():
+		return
+	var backgrounds: Node = _world.get_node_or_null(^"Map/ZoneBackgrounds")
+	assert_not_null(backgrounds, "白盒地图应有 ZoneBackgrounds")
+	if backgrounds == null:
+		return
+	for bg_name: String in ZONE_BG_NAMES:
+		var bg: Polygon2D = backgrounds.get_node_or_null(NodePath(bg_name)) as Polygon2D
+		assert_not_null(bg, "缺区域背景：%s" % bg_name)
+		if bg == null:
+			continue
+		var xs: Array = []
+		for point: Vector2 in bg.polygon:
+			xs.append(point.x)
+		assert_almost_eq(xs.max() - xs.min(), ZONE_BG_WIDTH, 0.01,
+			"%s 画布宽应为 %s" % [bg_name, str(ZONE_BG_WIDTH)])
+	for child: Node in backgrounds.get_children():
+		assert_false(str(child.name).begins_with("Curtain"), "不应再有幕布节点：%s" % child.name)
+
+
+# AC3：黑洞过场期间（渐黑~渐亮）玩家输入锁定，结束后恢复。
+func test_travel_locks_input_during_transition() -> void:
+	if _skip_unless_ready():
+		return
+	assert_false(_player.get("input_blocked"), "前置：开场输入未屏蔽")
+	_player.global_position = Vector2(370, -20)
+	await wait_physics_frames(3)
+	_player.global_position = Vector2(389, -60)
+	await wait_seconds(0.15) # 过场已开始（渐黑 0.25s 内），traveled 尚未发出
+	assert_true(_player.get("input_blocked"), "过场期间玩家输入应锁定")
+	await wait_seconds(1.2) # 过场结束（0.6s）+ 余量
+	assert_false(_player.get("input_blocked"), "过场结束后输入应恢复")

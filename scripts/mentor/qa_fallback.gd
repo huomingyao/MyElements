@@ -5,19 +5,19 @@
 # 「（离线模式）」角标由调用方（LLMClient）追加，不写进 answer（SPEC-04 §7 匹配规则 5）。
 extends RefCounted
 
-# ==== 常量区 ====
+# ==== 常量区 ===
 const TABLE_FILE: String = "qa_fallback.json"
 
 const F_KEYWORDS: String = "keywords"
 const F_ANSWER: String = "answer"
 const F_MENTOR_ID: String = "mentor_id"
 
-# ==== 状态区 ====
+# ==== 状态区 ===
 # 可命中行（keywords 非空）与兜底行（keywords 为空）分开存，避免每次匹配都判一遍。
 var _rows: Array = []
 var _fallback: Dictionary = {}
 
-# ==== 逻辑区 ====
+# ==== 逻辑区 ===
 func _init() -> void:
 	load_from(DataLoader.load_table(TABLE_FILE, TYPE_ARRAY, []) as Array)
 

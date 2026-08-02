@@ -92,6 +92,19 @@ func add_item(item_id: String, count: int) -> int:
 	return left
 
 
+# 容量查询（2026-08-03，背包满拾取反馈的判定口）：堆叠感知——整份 count 能装下才 true。
+# 同种物品堆叠余量 + 空格数 × 上限 >= count 即可；只读查询，不改变状态。
+func can_add(item_id: String, count: int) -> bool:
+	if item_id.is_empty() or count <= 0:
+		return false
+	var room: int = 0
+	for slot: Dictionary in _slots:
+		if str(slot.get(KEY_ID, "")) == item_id:
+			room += _stack_limit - int(slot.get(KEY_COUNT, 0))
+	room += (_slot_count - _slots.size()) * _stack_limit
+	return room >= count
+
+
 # 扣减物品，数量不足返回 false 且状态完全不变（AC3：不许部分扣减）。
 func remove_item(item_id: String, count: int) -> bool:
 	if item_id.is_empty() or count <= 0:

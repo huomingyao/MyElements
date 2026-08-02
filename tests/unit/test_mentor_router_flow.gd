@@ -236,4 +236,3 @@ func test_empty_reply_does_not_break_the_chain() -> void:
 	assert_true(
 		bool((messages[0] as Dictionary).get(KEY_OFFLINE, false)), "走兜底时 offline 应为 true"
 	)
-

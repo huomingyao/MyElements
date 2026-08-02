@@ -173,7 +173,8 @@ func test_typing_switches_avatar_talk_then_idle() -> void:
 	assert_eq(_panel.avatar_mode(), "idle", "打字结束立绘应切回 idle（AC2）")
 
 
-# AC2：逐字效果是渐进的——打字中途的文本比完整回复短。
+# AC2：逐字效果是渐进的——打字中途的当前行文本比完整回复短。
+# 只看最后一行（正在打字的导师行）；玩家提问行已是着色成稿，不参与长度比较（2026-08-03 着色增强）。
 func test_text_grows_gradually_while_typing() -> void:
 	if _skip_unless(["open_chat", "send_text", "is_typing"]):
 		return
@@ -182,13 +183,12 @@ func test_text_grows_gradually_while_typing() -> void:
 	_panel.submit("为什么氢气会爆炸")
 	await wait_process_frames(4)
 	var mid_texts: Array = _history_texts()
-	var longest_mid: int = 0
-	for text_value in mid_texts:
-		longest_mid = maxi(longest_mid, str(text_value).length())
+	assert_false(mid_texts.is_empty(), "应有历史记录")
+	var typing_line: String = str(mid_texts[mid_texts.size() - 1])
 	var full_len: int = str(_replies["monitor"]).length()
 	assert_true(
-		longest_mid < full_len,
-		"打字中途显示的字符应少于完整回复（逐字效果）：%d vs %d" % [longest_mid, full_len]
+		typing_line.length() < full_len,
+		"打字中途当前行字符应少于完整回复（逐字效果）：%d vs %d" % [typing_line.length(), full_len]
 	)
 	_panel.typing_chars_per_second = INSTANT_SPEED
 	await _wait_typing_done()
@@ -512,3 +512,107 @@ func _has_cjk(text: String) -> bool:
 		if code >= 0x4E00 and code <= 0x9FFF:
 			return true
 	return false
+
+
+# ==== 问答显示着色增强（2026-08-03，FR-M-02 呈现层优化）====
+# 导师行：RichText + 导师名加粗着色；玩家行：右对齐 + 区分色 + 「我」前缀；
+# bbcode 注入必须转义；打字中途保持纯文本（跳过打字的长度断言依赖它）。
+
+# 导师回复行用 RichTextLabel，导师名加粗 + 着色，正文完整可解析。
+func test_mentor_line_is_richtext_with_colored_bold_name() -> void:
+	if _skip_unless(["open_chat", "send_text"]):
+		return
+	_panel.open_chat("chem")
+	await _panel.send_text("为什么氢气会爆炸")
+	var list: Node = _node(N_LIST)
+	if list == null:
+		return
+	var mentor_line: Node = null
+	for child in list.get_children():
+		if str(child.get("text")).contains(str(_replies["chem"])):
+			mentor_line = child
+	assert_not_null(mentor_line, "记录中应有化学老师的回复行")
+	if mentor_line == null:
+		return
+	assert_true(mentor_line is RichTextLabel, "对话行应为 RichTextLabel（着色增强）")
+	if not (mentor_line is RichTextLabel):
+		return
+	var rich: RichTextLabel = mentor_line as RichTextLabel
+	assert_true(rich.bbcode_enabled, "对话行应启用 bbcode")
+	var raw: String = rich.text
+	var chem_name: String = _mentor_name("chem")
+	assert_true(raw.contains("[b]"), "导师名应加粗：%s" % raw)
+	assert_true(raw.contains("[color="), "导师名应着色：%s" % raw)
+	var parsed: String = rich.get_parsed_text()
+	assert_true(parsed.contains(chem_name), "解析文本应含导师姓名：%s" % parsed)
+	assert_true(parsed.contains(str(_replies["chem"])), "解析文本应含回复全文：%s" % parsed)
+
+
+# 玩家提问行：右对齐 + 着色 + 带玩家前缀（ui_strings 的 chat_player_label），与导师行一眼区分。
+func test_player_line_is_right_aligned_colored_with_prefix() -> void:
+	if _skip_unless(["open_chat", "send_text"]):
+		return
+	_panel.open_chat("chem")
+	await _panel.send_text("为什么氢气会爆炸")
+	var list: Node = _node(N_LIST)
+	if list == null or list.get_child_count() == 0:
+		return
+	var first: Node = list.get_child(0)
+	assert_true(first is RichTextLabel, "玩家行应为 RichTextLabel（着色增强）")
+	if not (first is RichTextLabel):
+		return
+	var rich: RichTextLabel = first as RichTextLabel
+	assert_eq(rich.horizontal_alignment, HORIZONTAL_ALIGNMENT_RIGHT, "玩家行应右对齐")
+	assert_true(rich.text.contains("[color="), "玩家行应着色：%s" % rich.text)
+	var gm: Node = Engine.get_main_loop().root.get_node_or_null(^"GameManager")
+	var prefix: String = ""
+	if gm != null:
+		prefix = str(gm.get_ui_string("chat_player_label"))
+	assert_false(prefix.is_empty(), "ui_strings 应有 chat_player_label（玩家行前缀）")
+	assert_true(rich.get_parsed_text().contains(prefix), "玩家行解析文本应带前缀：%s" % rich.get_parsed_text())
+	assert_true(rich.get_parsed_text().contains("为什么氢气会爆炸"), "玩家行应含提问原文")
+
+
+# 安全：玩家输入与 LLM 回复里的 bbcode 方括号必须转义，不许被解析成格式。
+func test_bbcode_in_content_is_escaped() -> void:
+	if _skip_unless(["open_chat", "send_text"]):
+		return
+	_replies["monitor"] = "看这里[b]加粗注入[/b]别上当"
+	_panel.open_chat("monitor")
+	await _panel.send_text("提问带[b]方括号[/b]试试")
+	var list: Node = _node(N_LIST)
+	if list == null:
+		return
+	for child in list.get_children():
+		if not (child is RichTextLabel):
+			continue
+		var rich: RichTextLabel = child as RichTextLabel
+		assert_true(
+			rich.text.contains("[lb]") or not rich.text.contains("[b]"),
+			"内容里的方括号应转义为 [lb]：%s" % rich.text
+		)
+		assert_false(
+			rich.get_parsed_text().is_empty(),
+			"转义后解析文本不应为空"
+		)
+
+
+# 回归：打字中途行保持纯文本（不含 bbcode 标签），完成行才着色——
+# 跳过打字的长度断言（test_click/accept_during_typing）依赖纯文本中途态。
+func test_mid_typing_line_stays_plain_until_finished() -> void:
+	if _skip_unless(["open_chat", "send_text", "is_typing"]):
+		return
+	_replies = {"monitor": "一段足够长的回复内容，用来验证打字中途不提前注入格式标签，保持纯文本。"}
+	_panel.open_chat("monitor")
+	_panel.typing_chars_per_second = 2.0
+	_panel.submit("随便问点什么")
+	await wait_process_frames(4)
+	assert_true(_panel.is_typing(), "前置：慢速下应仍在逐字打字")
+	var texts: Array = _history_texts()
+	assert_false(texts.is_empty(), "应有历史记录")
+	# 只断言最后一行（正在打字的导师行）；玩家提问行一次成稿、本来就着色。
+	var typing_line: String = str(texts[texts.size() - 1])
+	assert_false(typing_line.contains("[color="), "打字中途不应含颜色标签：%s" % typing_line)
+	assert_false(typing_line.contains("[b]"), "打字中途不应含加粗标签：%s" % typing_line)
+	_panel.typing_chars_per_second = INSTANT_SPEED
+	await _wait_typing_done()

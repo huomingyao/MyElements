@@ -31,6 +31,12 @@ const REASON_NEEDS_PURITY: String = "needs_purity_check"
 const FAIL_STYLE: String = "banner"
 const FAIL_DURATION: float = 4.0
 
+const ICON_SIZE: int = 28
+const PLACEHOLDER_SATURATION: float = 0.55
+const PLACEHOLDER_VALUE: float = 0.85
+const HASH_NORMALIZER: float = 1073741824.0
+const HUE_FULL_TURN: float = 1.0
+
 const UI_TITLE: String = "craft_title"
 const UI_REACT: String = "craft_react"
 const UI_IGNITE: String = "craft_ignite"
@@ -50,6 +56,9 @@ var _hydrogen: RefCounted = null
 var _slots: Array[String] = []
 var _tool: String = DEFAULT_TOOL
 var _open: bool = false
+
+# 占位纹理静态共享缓存（同 inventory_panel 口径）：按颜色键复用。
+static var _placeholder_cache: Dictionary = {}
 
 # true 时关闭动作额外发 close_requested，由 ui_manager 同步互斥状态（SPEC-03 §8）。
 var managed: bool = false
@@ -79,7 +88,16 @@ func _ready() -> void:
 		button.text = _ui(str(UI_TOOL_KEYS[tool]))
 		button.pressed.connect(select_tool.bind(tool))
 	for i: int in range(_slot_buttons.size()):
-		(_slot_buttons[i] as Button).pressed.connect(remove_material_at.bind(i))
+		var slot_button: Button = _slot_buttons[i] as Button
+		slot_button.pressed.connect(remove_material_at.bind(i))
+		var icon: TextureRect = TextureRect.new()
+		icon.name = "Icon"
+		icon.set_anchors_preset(Control.PRESET_CENTER)
+		icon.custom_minimum_size = Vector2(ICON_SIZE, ICON_SIZE)
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		slot_button.add_child(icon)
 	_react_button.pressed.connect(react)
 	_ignite_button.pressed.connect(ignite)
 	_purity_button.pressed.connect(purity_check)
@@ -323,30 +341,86 @@ func _same_items(a: Array, b: Array) -> bool:
 	return sa == sb
 
 
-# 界面刷新：格子显示物质/道具名（数据表），器材高亮当前选项，验纯按钮按出现条件显隐。
+# 界面刷新：格子显示物质/道具图标 + 名称（数据表），器材高亮当前选项，验纯按钮按出现条件显隐。
 func _refresh() -> void:
 	for i: int in range(_slot_buttons.size()):
 		var button: Button = _slot_buttons[i]
 		if i < _slots.size():
 			button.text = _display_name(_slots[i])
+			_apply_icon(button, _slots[i])
 		else:
 			button.text = _ui(UI_SLOT_EMPTY)
+			_apply_icon(button, "")
 	for tool: String in TOOL_OPTIONS:
 		(_tool_buttons[tool] as Button).modulate = Color(1, 1, 1) if tool == _tool else Color(0.6, 0.6, 0.6)
 	_purity_button.visible = can_purity_check()
 	_ignite_button.visible = can_ignite()
 
 
+# 格子图标（FR-G-05 AC5，同背包口径）：路径存在用真图标；缺失用 id 散列稳定色占位。
+func _apply_icon(button: Button, item_id: String) -> void:
+	var icon: TextureRect = button.get_node_or_null(^"Icon") as TextureRect
+	if icon == null:
+		return
+	if item_id.is_empty():
+		icon.texture = null
+		return
+	var icon_path: String = _icon_path_of(item_id)
+	var tex: Texture2D = null
+	if not icon_path.is_empty() and ResourceLoader.exists(icon_path):
+		tex = load(icon_path) as Texture2D
+	if tex == null:
+		tex = placeholder_texture_for(_color_for_id(item_id))
+	icon.texture = tex
+
+
+# 格子图标访问口（测试用）。
+func slot_icon_texture(index: int) -> Texture2D:
+	if index < 0 or index >= _slot_buttons.size():
+		return null
+	var icon: TextureRect = (_slot_buttons[index] as Button).get_node_or_null(^"Icon") as TextureRect
+	if icon == null:
+		return null
+	return icon.texture
+
+
+# 占位纹理：按颜色键静态缓存（同色复用同一实例）。
+static func placeholder_texture_for(color: Color) -> Texture2D:
+	var cached: Variant = _placeholder_cache.get(color)
+	if cached is Texture2D:
+		return cached
+	var image: Image = Image.create(ICON_SIZE, ICON_SIZE, false, Image.FORMAT_RGBA8)
+	image.fill(color)
+	var tex: Texture2D = ImageTexture.create_from_image(image)
+	_placeholder_cache[color] = tex
+	return tex
+
+
+func _color_for_id(item_id: String) -> Color:
+	var hue: float = fmod(absf(float(item_id.hash())) / HASH_NORMALIZER, HUE_FULL_TURN)
+	return Color.from_hsv(hue, PLACEHOLDER_SATURATION, PLACEHOLDER_VALUE)
+
+
+func _icon_path_of(item_id: String) -> String:
+	var record: Dictionary = _record_of(item_id)
+	return str(record.get("icon", ""))
+
+
 # 名称解析同采集物：先物质表再道具表；都查不到显示 id 本身（不崩溃）。
 func _display_name(item_id: String) -> String:
-	var substance: Dictionary = _db().get_substance(item_id)
-	if not substance.is_empty():
-		return str(substance.get("name", item_id))
+	var record: Dictionary = _record_of(item_id)
+	return str(record.get("name", item_id))
+
+
+# 记录解析：先物质表（RecipeDB），再道具表（items.json）。
+func _record_of(item_id: String) -> Dictionary:
+	var db: Node = _db()
+	if db != null:
+		var substance: Dictionary = db.get_substance(item_id)
+		if not substance.is_empty():
+			return substance
 	var items: RefCounted = (load("res://scripts/gameplay/item_effects.gd") as GDScript).new()
-	var item: Dictionary = items.get_item(item_id)
-	if not item.is_empty():
-		return str(item.get("name", item_id))
-	return item_id
+	return items.get_item(item_id)
 
 
 func _db() -> Node:

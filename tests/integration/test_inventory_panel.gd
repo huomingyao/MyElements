@@ -179,6 +179,23 @@ func test_drag_preview_uses_placeholder_with_count_badge() -> void:
 		assert_eq(str(badge.text), "3", "角标应显示数量")
 
 
+# 拖拽预览用真实图标（FR-G-05 AC5 拖拽合成）：图标文件存在时预览显示资源本身，
+# 不是色块占位；不存在才回退色块。
+func test_drag_preview_prefers_real_icon() -> void:
+	if _skip_unless_ready(["make_drag_preview"]):
+		return
+	var preview: Control = _panel.make_drag_preview("o2", "") as Control
+	if preview == null:
+		return
+	var icon: TextureRect = preview.get_node_or_null(^"Icon") as TextureRect
+	assert_not_null(icon, "预览应带图标节点")
+	if icon == null:
+		return
+	assert_not_null(icon.texture, "预览应有纹理")
+	if icon.texture != null:
+		assert_eq(icon.texture.resource_path, "res://assets/art/icons/o2.png", "图标存在时预览应用真实资源图")
+
+
 # AC1：打开时玩家输入被屏蔽——ui_manager 裁决（聊天框例外由世界注册时声明）。func test_ui_manager_blocks_input_when_panel_open() -> void:
 	if not FileAccess.file_exists(UI_MANAGER_SCRIPT):
 		fail_test("尚未实现 %s（SPEC-03 §8）" % UI_MANAGER_SCRIPT)

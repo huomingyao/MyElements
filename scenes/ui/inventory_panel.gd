@@ -239,7 +239,7 @@ static func placeholder_texture_for(color: Color) -> Texture2D:
 	return tex
 
 
-# 拖拽预览（包E）：占位纹理 + 数量角标（替代纯文字 Label）；数量为空白时不带角标。
+# 拖拽预览（包E + FR-G-05 AC5）：真实图标优先（资源本身跟随鼠标），缺失回退占位纹理 + 数量角标。
 func make_drag_preview(item_id: String, count_text: String) -> Control:
 	var root: Control = Control.new()
 	root.custom_minimum_size = Vector2(PLACEHOLDER_SIZE, PLACEHOLDER_SIZE)
@@ -249,7 +249,13 @@ func make_drag_preview(item_id: String, count_text: String) -> Control:
 	icon.set_anchors_preset(Control.PRESET_FULL_RECT)
 	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	icon.texture = placeholder_texture_for(_color_for_id(item_id))
+	var icon_path: String = _icon_path_of(item_id)
+	var tex: Texture2D = null
+	if not icon_path.is_empty() and ResourceLoader.exists(icon_path):
+		tex = load(icon_path) as Texture2D
+	if tex == null:
+		tex = placeholder_texture_for(_color_for_id(item_id))
+	icon.texture = tex
 	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(icon)
 	if not count_text.is_empty():

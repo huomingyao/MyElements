@@ -200,22 +200,29 @@ Player（CharacterBody2D，player.gd）
 | `classify(question: String) -> String` | 返回 `"combat"/"learning"/"chemistry"/"other"` |
 | `route_targets(category: String) -> Array[String]` | 返回被派导师 id 数组，如 `["think","assistant"]` |
 | `parse_mentions(text: String) -> Array[String]` | 解析回复中的 @xx → 导师 id 数组 |
-| `handle_message(question: String) -> Array[Dictionary]` | 完整一轮对话，返回消息序列 |
+| `expertise_of(mentor_id: String) -> Array[String]` | 该导师的专长分类数组（2026-08-03 重构新增；未知 id 返回空数组） |
+| `handle_message(question: String, first_mentor_id: String = "monitor") -> Array[Dictionary]` | 完整一轮对话，返回消息序列；首接 = `first_mentor_id`（2026-08-03 重构） |
 
 `handle_message` 返回结构：
 
 ```gdscript
 [
-  {"mentor_id": "monitor", "text": "别慌…… @化学老师 你来把原理讲透！", "offline": false},
-  {"mentor_id": "chem",    "text": "2H₂ + O₂ =点燃= 2H₂O……",        "offline": false}
+  {"mentor_id": "chem", "text": "2H₂ + O₂ =点燃= 2H₂O……",                "offline": false},
+  {"mentor_id": "chem", "text": "这超出我的讲台了，@思维老师 你来。", "offline": false},
+  {"mentor_id": "think", "text": "对付酸雾要用中和的思路……",            "offline": false}
 ]
 ```
 
+**流程（FR-M-04，2026-08-03 重构）**：
+1. 首接 = `first_mentor_id`（聊天框当前导师；无注入时调用方传 `"monitor"` 总台）。
+2. `classify(question)` 命中的分类 ∈ 首接导师 `expertise` → 首接导师直接回答，返回 1 条。
+3. 不在 → 首接导师说 `handoff_line`（`{mention}` 填 `route_targets(category)` 首位导师的 mention），随后被转介导师回答。首接导师不硬答非专长内容。
+
 **硬约束（对应 FR-M-05）**：
-- 第一条消息的 `mentor_id` **必须**是 `"monitor"`。
-- 返回数组长度 ≤ 3（班主任 + 最多 2 个被派老师，"学习方法类"派两位时为 3）。
-- 只解析 `monitor` 消息中的 @；其他导师消息中的 @ 一律忽略（不触发新一轮）。
-- 递归深度硬上限 1 次调度，代码层面用计数器保证，不依赖 prompt 自觉。
+- 第一条消息的 `mentor_id` **必须**是 `first_mentor_id`。
+- 返回数组长度 ≤ 3（首接 + 最多 2 个被转介者，"学习方法类"转两位时为 3）。
+- 只解析首接消息中的 @；其他导师消息中的 @ 一律忽略（不触发新一轮）。
+- 转介深度硬上限 1 次 + qa 归属改道硬上限 1 次（2026-08-03，防死空气），代码层面用计数器保证，不依赖 prompt 自觉。
 
 **非契约辅助**（TP-14 落地新增，不属冻结面，调用方勿依赖）：
 
@@ -280,7 +287,8 @@ Player（CharacterBody2D，player.gd）
 `_trim_history()` 只保留最后 `llm.history_rounds`（默认 4）个元素。
 
 **网络常量**（非玩家可见文案，属技术约束，写在 `llm_client.gd` 常量区）：
-端点 `https://api.deepseek.com/chat/completions`、模型 `deepseek-chat`、鉴权头 `Authorization: Bearer <key>`（OpenAI 兼容）。
+端点 `https://api.deepseek.com/chat/completions`、模型 `deepseek-v4-flash`（2026-08-03 起）、鉴权头 `Authorization: Bearer <key>`（OpenAI 兼容）。
+key 读取顺序（NFR-05 不变：绝不进 res://、绝不进日志）：①系统环境变量 `DEEPSEEK_API`；②`user://config.cfg`。
 `max_tokens` / `temperature` 读 `balance.json` 的 `llm.max_tokens` / `llm.temperature`。
 
 **离线回答组装**：`_offline_reply()` = `QaFallback.answer(question)` + `ui_strings.chat_offline_badge`。
@@ -291,6 +299,7 @@ Player（CharacterBody2D，player.gd）
 | 签名 | 说明 |
 |---|---|
 | `answer(question: String) -> String` | 关键词命中最多者胜；平票取表中先出现者；零命中返回班主任固定话术 |
+| `answer_for(mentor_id: String, question: String) -> Dictionary` | 归属匹配（2026-08-03 重构新增）：返回 `{text, owner_id}`——最佳命中行归属 `mentor_id` 时 `text` 为答案、`owner_id == mentor_id`；归属其他导师时 `text` 为空、`owner_id` 为归属导师（供 router 转介）；零命中 `text` 为兜底行话术、`owner_id` 为兜底行 mentor |
 | `match_score(question: String, keywords: Array) -> int` | 命中关键词数（供测试直接断言） |
 
 离线回答由调用方统一追加「（离线模式）」后缀，**不在数据表里写这个后缀**。
@@ -377,6 +386,7 @@ World（scenes/main/world.tscn，P1）
 | 2026-08-02 | TP-14 新增两个 `scripts/mentor/` **纯逻辑类**（**不属冻结面**，不是 autoload，可被单测直接实例化，见 §6.1 / §6.1.1）：`mentor_router.gd`（§6.1 四个契约方法 + 非契约辅助 `load_from` / `set_reply_provider` / `dispatch_count` / `system_prompt_for`；分类关键词、派活对象、调度语、人设全部读自 `mentors.json`，代码里零内容文本）、`prompt_suffix.gd`（SPEC-04 §6 通用后缀 `text()` / `append_to()`，唯一允许写 prompt 文本的文件）。二者只经静态 `DataLoader` 读表、只调用已冻结的 `LLMClient.ask`，未改动 §2..§7 任何签名 | TP-14（FR-M-04/M-05/M-06）实现需要；数据表仍不由场景自读（§1） | P1 |
 | 2026-08-02 | TP-15 §6.2 补齐三处**规格缺口**（均为新增，未改动 §2..§7 已冻结签名）：①「历史只带最近 4 轮」原未定义「一轮」的数据形状，实现只能猜——现约定 `history` 元素为 `{"question", "answer"}`，进请求体展开成 `user`+`assistant` 两条；②「测试通过注入 stub 替换 `_generate_reply()`」在 GDScript 里无法对 autoload 做方法替换——改为在 `_generate_reply()` 内部留唯一发包点 `set_transport(Callable)`，并定义传输层返回形状 `{result, code, body}` 与四种失败的判定口径；③ 端点/模型/鉴权头此前无处记载，现钉在 §6.2「网络常量」。同时补记非契约辅助 `build_request_body` / `attempt_count` / `timeout_seconds` / `retry_count` / `set_timeout_seconds` / `set_retry_count` / `set_qa_fallback`。行为变更：骨架期 `_offline_reply()` 只返回角标，本次改为 `QaFallback.answer()` + 角标 | TP-15（FR-M-07/M-08/M-09）实现与 UT-M08/IT-M07 可测性需要 | P1 |
 | 2026-08-02 | TP-15 新增 `scripts/mentor/qa_fallback.gd`（§6.3 契约 `answer` / `match_score` + 非契约辅助 `load_from` / `best_row` / `mentor_id_for`）。纯逻辑 `RefCounted`，经静态 `DataLoader` 读 `qa_fallback.json`，零命中话术取自表中兜底行（SPEC-04 §7），代码里零玩家可见文案 | TP-15（FR-M-09）实现需要 | P1 |
+| 2026-08-03 | **冻结面变更**：§6.1 `handle_message(question)` → `handle_message(question, first_mentor_id := "monitor")`，首条消息 = 首接导师（不再恒 monitor）；新增契约方法 `expertise_of(mentor_id)`；§6.3 新增契约方法 `answer_for(mentor_id, question) -> {text, owner_id}`（qa 条目按归属导师匹配）。配套流程重构见 SPEC-01 FR-M-04（2026-08-03 版）：直接首接 + 导师间转介，根治"被派导师答非所问" | 用户（P1）裁决的多智能体协同流程重构：找谁聊谁首接，非专长转介不硬答 | P1 |
 | 2026-08-02 | TP-15 新增 §6.4「配置面板占位」：`scenes/mentor/config_panel.tscn` + `config_panel.gd`（**场景层，不属冻结面**）。理由：FR-M-10 只在 SPEC-01/02 里描述了「key 输入框可用 + 滑块可拖不生效 + 明示赛后可配置」，冻结面上没有任何落点，实现无处对齐——现钉住四个方法（`apply_api_key` / `set_offline_toggle` / `personality` / `note_text`）、五个唯一名节点与 NFR-05 口径（`secret = true`、不回显、不记录、只写不读）。同时把 FR-M-08 AC4 的手动离线开关归到本面板。未新增 `ui_strings.json` 键（`config_note` 已在 SPEC-05 §9），未改动 §2..§7 已冻结签名 | TP-15（FR-M-10 / FR-M-08 AC4）实现需要；MT-M10 手工验收的对齐基线 | P1 |
 | 2026-08-02 | TP-05 新增的**非契约**辅助（不属冻结面，调用方勿依赖）：`KnowledgeTip.advance(delta: float)`（唯一时间推进入口，由渲染层在 `_process` 里调；autoload 自身不跑 `_process`）、`current_tip_id()`、`current_text()`、`current_style()`（供渲染层与测试读当前显示状态）。行为变更：骨架期的「入队即立刻出队」改为**真串行队列**——排队中的字幕在上台时才发 `tip_shown`，`warning` 抢占时被打断的字幕直接作废不重播 | TP-05（FR-U-01）实现需要；§3 已冻结的 5 个方法签名与 2 个信号未变 | P1 |
 | 2026-08-02 | TP-08 新增 `scripts/gameplay/hydrogen_event.gd`（**纯逻辑 RefCounted，不属冻结面**：`ignite(items)` / `is_purity_check_available()` / `do_purity_check()` / `unlock_purity_check()` + 信号 `explosion_triggered` / `purity_check_performed`；爆炸伤害读 `balance.json damage.hydrogen_explosion`，解锁走 `debug.force_purity_unlock` 或导师回调）与 `scenes/gameplay/explosion.gd/.tscn`（场景层表现：`bind(event)` 唯一接线，火光 tween + 相机衰减震屏，音效挂载点无 stream 静默跳过）。只调用已冻结的 `RecipeDB.try_craft/build_card`、`GameManager.modify_health/set_flag`、`KnowledgeTip.show`，未改动 §2..§7 任何签名 | TP-08（FR-G-08/G-09）实现需要 | P1 |
@@ -409,7 +419,12 @@ World（scenes/main/world.tscn，P1）
 | 2026-08-02 | FR-U-06 面板自适应布局（场景层，不属冻结面）：合成/背包/卡片模态面板由固定像素尺寸改为锚点比例铺开（宽 76%/70%/80%、高 60%/70%/70%）并居中；主菜单/暂停菜单按钮组改为中心锚点（`anchors_preset=8`）；死亡画面四行文案改垂直中心锚点 + 全宽居中文本。`project.godot` 显式补 `window/stretch/aspect="keep"`（运行时默认即 keep，补写对齐 FR-C-01 AC1 文案）。**不影响冻结签名** | FR-U-06 落地（IT-U06 6 项全绿）；并修复会话中 Godot 进程改写 project.godot 丢失 640×360 视口行的问题 | P1 |
 | 2026-08-02 | **4 个玩法对象节点树模块化重构**（场景层，不属冻结面，纯结构重构无行为变更）：collectable / monster_co_ghost / monster_acid_mist / explosion 由扁平节点树改为模块化层级——世界空间视觉部件拆成 `%Visuals` 容器下的独立命名节点（collectable：`%Glow`/`%IconSprite`；ghost：`%Glow`/`%Body`/`%EyeL`/`%EyeR`；acid：`%Glow`/`%Body`/`%Core`；explosion：`%Fireball`/`%Shockwave`），音频进 `%Audio` 容器（`%PickupPlayer`/`%BoomPlayer`），explosion 全屏闪光留在根层 `FlashLayer`(CanvasLayer)。脚本侧视觉逻辑按部件拆分独立方法（collectable `_apply_glow/_apply_icon/_tween_float/_tween_glow`；ghost/acid `_apply_visuals/_start_glow_pulse`；explosion `_tween_flash/_tween_fireball/_tween_shockwave`）。7 个既有唯一名（`%Glow %IconSprite %PickupPlayer %ContactArea %HitArea %Flash %BoomPlayer`）、根节点类型、物理碰撞体、根方法/信号契约全部保留。**不影响冻结签名** | 用户需求：对象节点太少不便针对性修改，先做 4 个核心示范（视觉逻辑分离）；IT-G01/IT-G08/IT-G10/IT-G11 各增 1 项结构断言 | P1 |
 | 2026-08-02 | 背包/合成面板美术替换（场景层，不属冻结面）：`inventory_panel`/`craft_panel` 的 `Panel` 由 PanelContainer 改为 Control + `Bg`(TextureRect) 宝箱底图（`assets/art/ui/inventory_bg.png`/`craft_bg.png`，由 `panels.png` 切分），控件按锚点对准底图格子，按钮改 flat；面板比例按底图调整为背包 51.5%×83.3%、合成 34.1%×88.9%（FR-U-06 AC1 口径同步）。全部唯一名（`%Grid %TitleLabel %Slot0..2 %Tool* %React/%Ignite/%Purity/%CancelButton`）、根方法/信号契约保留。**不影响冻结签名** | 用户提供宝箱美术，要求替换合成与背包面板 UI | P1 |
-| 2026-08-02 | 主菜单按钮组下移（场景层，不属冻结面）：`main_menu` 的 `MenuBox` 垂直锚点由 0.5 改为 0.62（水平居中不变），按钮组呈「中间偏下」、避开背景人物区；暂停菜单保持视口居中。FR-U-06 AC2 与 IT-U06 口径同步。**不影响冻结签名** | 用户审美需求：主菜单按钮中间偏下更好看 | P1 |
+| 2026-08-02 | 主菜单按钮组下移（场景层，不属冻结面）：`main_menu` 的 `MenuBox` 垂直锚点由 0.5 改为 0.66（水平居中不变），按钮组呈「中间偏下」、避开背景人物区；暂停菜单保持视口居中。FR-U-06 AC2 与 IT-U06 口径同步。**不影响冻结签名** | 用户审美需求：主菜单按钮中间偏下更好看 | P1 |
 | 2026-08-02 | 背包内合成快捷入口（FR-G-05 AC4，场景层）：新增输入动作 `craft`（X 键）；`inventory_panel` 新增信号 `craft_requested()`（背包打开时按 X 发出，未打开不触发）与 `%HintLabel` 提示（ui_strings `inventory_craft_hint`）；world `_setup_ui` 接线 `craft_requested → ui_manager.open("craft")`（互斥自动关背包）。合成台 E 交互入口保留不变。**不影响冻结签名** | 用户需求：进入背包后可按特殊键直接合成 | P1 |
-| 2026-08-02 | **§8 裁决规则修订 + ui_manager 分组共存**（FR-G-05 AC5，场景层）：§8「同一时刻只允许一个模态面板」修订为「默认互斥，`register_panel` 第四参 `group` 相同且非空的面板可同屏并列」（当前仅背包+合成台 `crafting` 组）；`ui_manager` 内部由单一 `_active` 改为 `_open_order` 栈，`register_panel` 增可选参 `group`、新增 `close_all()`，Esc 逐层关最上面板（旧三参调用与跨组互斥行为不变）。背包靠左（51%×83%）、合成台靠右（34%×89%）同屏并列（FR-U-06 AC1 口径同步）；两面板根改 `mouse_filter=IGNORE` 互不遮挡点击，craft_panel 可见区域 `set_drag_forwarding` 转发拖放——背包材料可直接拖到合成界面入格；world 接线 `craft_requested → toggle("craft")`、合成台 E 交互同时打开背包+合成台。**不影响冻结签名**（ui_manager 非 autoload） | 用户需求：合成台不遮背包、背包材料直接拖入合成 | P1 |
+| 2026-08-02 | **§8 裁决规则修订 + ui_manager 分组共存**（FR-G-05 AC5，场景层）：§8「同一时刻只允许一个模态面板」修订为「默认互斥，`register_panel` 第四参 `group` 相同且非空的面板可同屏并列」（当前仅背包+合成台 `crafting` 组）；`ui_manager` 内部由单一 `_active` 改为 `_open_order` 栈，`register_panel` 增可选参 `group`、新增 `close_all()`，Esc 逐层关最上面板（旧三参调用与跨组互斥行为不变）。背包靠左（51%×83%）、合成台靠右（34%×89%）同屏并列（FR-U-06 AC1 口径同步）；两面板根改 `mouse_filter=IGNORE` 互不遮挡点击，craft_panel 可见区域 `set_drag_forwarding` 转发拖放——背包材料可直接拖到合成界面入格；craft_panel 移除自带 `Dim` 暗化层（两条打开路径均保证背包同屏，暗化由背包的 Dim 承担，避免背包被二次压暗）；world 接线 `craft_requested → toggle("craft")`、合成台 E 交互同时打开背包+合成台。**不影响冻结签名**（ui_manager 非 autoload） | 用户需求：合成台不遮背包、背包材料直接拖入合成、合成台打开时背包不变暗 | P1 |
 | 2026-08-02 | **导师室独立页 + 区域黑洞过渡（取代 D2）**（场景层，不属冻结面）：①学院建筑与学院区背景从世界移除，`main_menu.open_academy()` 改为整页加载新场景 `scenes/mentor/mentor_room.tscn`（教室场景图 `assets/art/mentor_room/room_bg.png` + 四导师立绘卡 `portrait_<id>.png`，卡数据驱动 mentors.json，点卡开聊内嵌 chat_panel），D2 出生点覆盖元数据机制（`world_spawn_override`/`academy_gate`）与 world `_resolve_spawn_point` 一并删除；②世界内新增输入动作 `mentor_room`（T 键），导师室注册为 ui_manager 模态面板（`blocks_input=true`，聊天框内嵌不再单列注册，FR-M-02 AC1「世界不暂停」由不暂停树保持）；③新增 `scenes/gameplay/black_hole.tscn`（黑核+紫环程序化视觉，Area2D 双向触发→自建黑屏覆盖层渐黑→传送对侧落点→渐亮，`traveled` 信号），world 摆 4 实例封三条区域边界（盐湖↔草原 ×1、草原↔营地 ×2 封学院缺口两端、营地↔矿洞 ×1），落点经 ZoneTrigger 自动切区；④白盒四区背景由平铺改为单张完整 UV（学院紫色块删除）。`academy.tscn`/`mentor_npc` 保留未删（test_academy 独立实例仍可用，赛后可作导师室内景复用）。**不影响冻结签名** | 用户要求：删背景里的导师室做独立页、场景间黑洞黑屏过场 | P1 |
+| 2026-08-03 | **FR-C-10 区域相机钳制与边界幕布**（场景层，不属冻结面）：①world 新增 `ZONE_CAMERA_BOUNDS` 白盒坐标查表，`_setup_player` 初始相机边界由全图改为草原矩形，`_on_zone_changed` 随切区切换 `set_map_bounds`（缺省回退全图）；②`black_hole` 新增 `travel_started` 信号（`_travel` 开头发出，与 `traveled` 成对），world 据此在渐黑~渐亮过场期间置 `_travel_lock` 并入 `_sync_input_block` 合取锁输入；③`black_hole._teleport` 定位后若身体有 `reset_camera_smoothing` 即调用（相机 snap，渐亮无跨区拖影）；④白盒图 `ZoneBackgrounds` 末尾追加 4 条全高黑色幕布（x=-700/-150/600/1375，宽 120），树序在区域背景之后、可交互对象之下。`player.set_map_bounds`/`reset_camera_smoothing` 既有签名不变。**不影响冻结签名** | 用户需求：触碰地图边缘才黑屏切图，此前看不到其他地图（相机分区钳制 + 幕布 + 过场锁输入） | P1 |
+| 2026-08-03 | 合成格子与拖拽预览显示资源图标（FR-G-05 AC5 配套，场景层）：`craft_panel` 材料格新增 `Icon`(TextureRect) 子节点，`_refresh` 按数据表 `icon` 路径贴真实图标、缺失回退 id 散列色占位（`slot_icon_texture` 观测口）；`inventory_panel.make_drag_preview` 由纯占位色块改为真实图标优先、缺失回退色块。**不影响冻结签名** | 用户反馈：拖到合成台应显示资源图标而非文字/色块 | P1 |
+| 2026-08-03 | **黑洞视觉移除（改隐形边缘触发器）**（场景层，不属冻结面）：`black_hole` 删除程序化黑核/紫环视觉与脉动/旋转 Tween（`_build_visuals`/`_circle_points`/`_exit_tree` 清理及配套常量），节点只剩 Shape 碰撞体；区域边界观感改由白盒图四条黑色幕布承担。传送逻辑（`travel_started`/`traveled` 信号、渐黑过场、落点 snap、冷却）全部不变。**不影响冻结签名** | 用户拍板：黑洞可以去掉，边缘黑屏切图保留 | P1 |
+| 2026-08-03 | **FR-C-10 v2 等宽画布重排（取代幕布方案）**（场景层，不属冻结面）：四区画布统一 1000px 宽（≥640 视口）紧凑重排——盐湖 -1700..-700 不动、草原 -640..360（+60）、营地 420..1420（-180）、矿洞 1480..2480（+80），区间 60px 缝隙；相机钳制下屏幕恒被当前区画布铺满，两侧不露黑边，4 条幕布随之移除。边界由 4 黑洞缩为 3 个隐形触发器（x=-670 / 390 / 1450，原学院缺口带消失）；白盒图（背景/河流/地面/右墙/采集点）、world.tscn（区域触发器/设施/怪物/CuSO₄ 池/黑洞）、world.gd 常量（PLAYER_SPAWN/CAMP_CENTER/GRASS_GHOST_SPAWN/MAP_BOUNDS/ZONE_CAMERA_BOUNDS）全量同步挪位。**不影响冻结签名** | 用户拍板：画布不一样长要解决，且两侧不露黑边 | P1 |
+| 2026-08-03 | **主菜单图鉴（资源背包）门移除**（场景层，不属冻结面）：`main_menu.tscn` 删除 `CodexButton`，`main_menu.gd` 同步移除 `CODEX_SCENE_PATH`/`UI_MENU_CODEX`/`open_codex()` 及标签赋值，FR-C-08 由三个门改为两个门（开始冒险 / 导师学院）+ 退出，SPEC-01 同步。图鉴面板 `codex_panel` 保留，仍从游戏内 HUD 进入；`menu_codex` 文案键暂留 ui_strings.json（validate_data 白名单不变）。**不影响冻结签名** | 用户要求：删掉主菜单的资源背包按钮 | P1 |

@@ -120,6 +120,56 @@ func test_full_slots_still_accept_same_item() -> void:
 	assert_eq(inv.count_of("fe"), 6, "堆叠应生效")
 
 
+# can_add（2026-08-03，背包满拾取反馈的判定口）：堆叠感知容量查询——
+# 同种物品堆叠还有空间或有空格即不算满；数量需整份装得下才返回 true。
+func test_can_add_on_empty_inventory() -> void:
+	if inv == null:
+		return
+	assert_true(inv.has_method("can_add"), "Inventory 应有 can_add(item_id, count)（背包满判定口）")
+	if not inv.has_method("can_add"):
+		return
+	assert_true(bool(inv.can_add("s", 1)), "空背包应可装入")
+	assert_true(bool(inv.can_add("s", EXPECTED_SLOTS * EXPECTED_STACK)), "刚好装满整包应可装入")
+	assert_false(bool(inv.can_add("s", EXPECTED_SLOTS * EXPECTED_STACK + 1)), "超过整包容量应不可装入")
+
+
+# 满格但同物品堆叠仍有空间：can_add 必须按堆叠判定，不能只看格数。
+func test_can_add_stack_aware_when_slots_full() -> void:
+	if inv == null or not inv.has_method("can_add"):
+		fail_test("Inventory 应有 can_add(item_id, count)")
+		return
+	var ids: Array[String] = ["o2", "h2", "c", "s", "co", "h2o", "caco3", "fe"]
+	for id: String in ids:
+		inv.add_item(id, 1)
+	assert_eq(inv.used_slots(), EXPECTED_SLOTS, "前提：8 格占满")
+	assert_true(bool(inv.can_add("fe", 1)), "满格但 fe 堆叠有空间，应可装入")
+	assert_true(bool(inv.can_add("fe", EXPECTED_STACK - 1)), "fe 堆叠余量内应可装入")
+	assert_false(bool(inv.can_add("fe", EXPECTED_STACK)), "超过 fe 堆叠余量应不可装入")
+	assert_false(bool(inv.can_add("nacl", 1)), "满格且包内没有的新物品应不可装入")
+
+
+# 全部塞到堆叠上限后，同物品也放不进去了。
+func test_can_add_false_when_truly_full() -> void:
+	if inv == null or not inv.has_method("can_add"):
+		fail_test("Inventory 应有 can_add(item_id, count)")
+		return
+	var capacity: int = EXPECTED_SLOTS * EXPECTED_STACK
+	inv.add_item("s", capacity)
+	assert_false(bool(inv.can_add("s", 1)), "整包塞满后同物品也应不可装入")
+	assert_false(bool(inv.can_add("fe", 1)), "整包塞满后新物品应不可装入")
+
+
+# 防御性输入：空 id / 非正数量永远不可装入，且不改变状态。
+func test_can_add_rejects_invalid_input() -> void:
+	if inv == null or not inv.has_method("can_add"):
+		fail_test("Inventory 应有 can_add(item_id, count)")
+		return
+	assert_false(bool(inv.can_add("", 1)), "空 id 应不可装入")
+	assert_false(bool(inv.can_add("s", 0)), "0 个应不可装入")
+	assert_false(bool(inv.can_add("s", -2)), "负数应不可装入")
+	assert_eq(inv.used_slots(), 0, "查询不应改变背包状态")
+
+
 # AC3：remove_item 数量足够时返回 true 并扣减。
 func test_remove_item_succeeds_when_enough() -> void:
 	if inv == null:

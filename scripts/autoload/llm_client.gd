@@ -1,5 +1,5 @@
 # LLMClient（SPEC-03 §6.2，FR-M-07/08/09）：DeepSeek 调用 / 超时重试 / 离线兜底。
-# 安全约束（NFR-05）：key 只从 user://config.cfg 读，绝不写进 res://、绝不进日志。
+# 安全约束（NFR-05）：key 优先读系统环境变量，其次 user://config.cfg；绝不写进 res://、绝不进日志。
 # 唯一发包点在 _generate_reply() 内；测试用 set_transport() 注入传输层，不发真实请求。
 extends Node
 
@@ -15,10 +15,12 @@ const QaScript: GDScript = preload("res://scripts/mentor/qa_fallback.gd")
 const CONFIG_PATH: String = "user://config.cfg"
 const CONFIG_SECTION: String = "llm"
 const CONFIG_KEY: String = "api_key"
+# 环境变量名（key 不落任何文件时的首选来源，2026-08-03）。
+const ENV_KEY: String = "DEEPSEEK_API"
 
 # 网络常量（SPEC-03 §6.2）：OpenAI 兼容端点，属技术约束而非玩家可见文案。
 const ENDPOINT: String = "https://api.deepseek.com/chat/completions"
-const MODEL: String = "deepseek-chat"
+const MODEL: String = "deepseek-v4-flash"
 const HEADER_CONTENT_TYPE: String = "Content-Type: application/json"
 const HEADER_AUTH_PREFIX: String = "Authorization: Bearer "
 
@@ -86,6 +88,11 @@ func _ready() -> void:
 
 
 func _load_api_key() -> void:
+	# 首选系统环境变量（key 不落任何文件）；缺省回退 user://config.cfg（NFR-05 两条路径都合规）。
+	var from_env: String = OS.get_environment(ENV_KEY).strip_edges()
+	if not from_env.is_empty():
+		_api_key = from_env
+		return
 	var config: ConfigFile = ConfigFile.new()
 	var err: int = config.load(CONFIG_PATH)
 	if err != OK:

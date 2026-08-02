@@ -14,8 +14,8 @@
   回答带「（离线模式）」标记，全部流程仍可完整体验。
 
 【素材授权】
-  占位美术：程序生成（生成器 scripts/tools/gen_placeholders.gd，
-    运行 ./gen_placeholders.sh 复跑），无第三方素材，P4 正式美术交付后替换。
+  占位美术：程序生成（确定性输出，生成器已随正式美术就位后移除），
+    无第三方素材，P4 正式美术交付后替换。
   字体：缝合怪像素字体 Fusion Pixel Font 12px 比例简体中文版
     （作者 TakWolf，OFL-1.1，许可文本 assets/fonts/OFL.txt，
     https://github.com/TakWolf/fusion-pixel-font）。

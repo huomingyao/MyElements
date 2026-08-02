@@ -1,18 +1,16 @@
-# 主菜单（FR-C-08）：开始冒险 / 导师学院 / 图鉴 三个门 + 退出。
+# 主菜单（FR-C-08）：开始冒险 / 导师学院 两个门 + 退出。
 # 场景切换走可注入的导航回调（SPEC-06 §3 可测性）；目标场景未交付时警告不崩溃（并行开发期）。
 # 托管 WorldMapPanel：主菜单内按 M 可打开世界地图页（FR-U-03 AC1 入口之一）。
 extends Control
 
 # ==== 常量区 ====
 
-# 世界/图鉴/导师室场景路径：世界与图鉴由 SPEC-03 §8 钉死；导师室为独立页（2026-08-02 取代 D2 出生点覆盖方案）。
+# 世界/导师室场景路径：世界由 SPEC-03 §8 钉死；导师室为独立页（2026-08-02 取代 D2 出生点覆盖方案）。
 const WORLD_SCENE_PATH: String = "res://scenes/main/world.tscn"
-const CODEX_SCENE_PATH: String = "res://scenes/ui/codex_panel.tscn"
 const MENTOR_ROOM_SCENE_PATH: String = "res://scenes/mentor/mentor_room.tscn"
 
 const UI_MENU_START: String = "menu_start"
 const UI_MENU_ACADEMY: String = "menu_academy"
-const UI_MENU_CODEX: String = "menu_codex"
 const UI_MENU_QUIT: String = "menu_quit"
 
 # ==== 逻辑区 ====
@@ -22,7 +20,6 @@ var _quitter: Callable = Callable()
 
 @onready var _start_button: Button = %StartButton
 @onready var _academy_button: Button = %AcademyButton
-@onready var _codex_button: Button = %CodexButton
 @onready var _quit_button: Button = %QuitButton
 
 
@@ -30,7 +27,6 @@ func _ready() -> void:
 	_apply_labels()
 	_start_button.pressed.connect(start_game)
 	_academy_button.pressed.connect(open_academy)
-	_codex_button.pressed.connect(open_codex)
 	_quit_button.pressed.connect(quit_game)
 
 
@@ -53,10 +49,6 @@ func open_academy() -> void:
 	_navigate(MENTOR_ROOM_SCENE_PATH)
 
 
-func open_codex() -> void:
-	_navigate(CODEX_SCENE_PATH)
-
-
 func quit_game() -> void:
 	if _quitter.is_valid():
 		_quitter.call()
@@ -77,7 +69,6 @@ func _navigate(path: String) -> void:
 func _apply_labels() -> void:
 	_start_button.text = _ui(UI_MENU_START)
 	_academy_button.text = _ui(UI_MENU_ACADEMY)
-	_codex_button.text = _ui(UI_MENU_CODEX)
 	_quit_button.text = _ui(UI_MENU_QUIT)
 
 

@@ -1,4 +1,4 @@
-# IT-C08 / FR-C-08：三个门分别加载正确场景、按钮文案来自 ui_strings、
+# IT-C08 / FR-C-08：两个门分别加载正确场景、按钮文案来自 ui_strings、
 # Esc 打开暂停菜单并可返回主菜单、主菜单内按 M 可打开世界地图页（FR-U-03 AC1 入口之一）。
 # AC3（加载 ≤3 秒）无法在 headless 断言，归手工验收（见 TP-12 报告）。
 extends GutTest
@@ -10,10 +10,9 @@ const MENU_SCRIPT: String = "res://scenes/main/main_menu.gd"
 const PAUSE_SCENE: String = "res://scenes/main/pause_menu.tscn"
 const PAUSE_SCRIPT: String = "res://scenes/main/pause_menu.gd"
 
-# 世界场景路径由 SPEC-03 §8 钉死；图鉴路径是 TP-12 与 TP-16 的约定（见报告）。
+# 世界场景路径由 SPEC-03 §8 钉死。
 # 2026-08-02：学院门改为整页进入导师室独立场景（取代 D2 世界内出生点覆盖）。
 const WORLD_SCENE_PATH: String = "res://scenes/main/world.tscn"
-const CODEX_SCENE_PATH: String = "res://scenes/ui/codex_panel.tscn"
 const MENTOR_ROOM_SCENE_PATH: String = "res://scenes/mentor/mentor_room.tscn"
 const MAIN_MENU_SCENE_PATH: String = "res://scenes/main/main_menu.tscn"
 
@@ -77,15 +76,14 @@ func _menu_node(unique_name: String) -> Node:
 	return found
 
 
-# AC1：开始冒险 / 导师学院 / 图鉴 门分别导航到世界 / 导师室 / 图鉴场景；
+# AC1：开始冒险 / 导师学院 门分别导航到世界 / 导师室场景；
 # 2026-08-02：学院门整页进入导师室独立场景（不再写出生点覆盖元数据）。
-func test_three_doors_navigate_to_expected_scenes() -> void:
+func test_two_doors_navigate_to_expected_scenes() -> void:
 	if _menu == null:
 		return
 	var start_button: Node = _menu_node("StartButton")
 	var academy_button: Node = _menu_node("AcademyButton")
-	var codex_button: Node = _menu_node("CodexButton")
-	if start_button == null or academy_button == null or codex_button == null:
+	if start_button == null or academy_button == null:
 		return
 	start_button.pressed.emit()
 	assert_eq(_nav_calls, [WORLD_SCENE_PATH], "开始冒险应加载世界场景")
@@ -93,12 +91,6 @@ func test_three_doors_navigate_to_expected_scenes() -> void:
 	assert_eq(
 		_nav_calls, [WORLD_SCENE_PATH, MENTOR_ROOM_SCENE_PATH],
 		"学院门应整页进入导师室场景"
-	)
-	codex_button.pressed.emit()
-	assert_eq(
-		_nav_calls,
-		[WORLD_SCENE_PATH, MENTOR_ROOM_SCENE_PATH, CODEX_SCENE_PATH],
-		"图鉴门应加载图鉴界面"
 	)
 
 
@@ -121,7 +113,6 @@ func test_button_labels_come_from_ui_strings() -> void:
 	var cases: Array = [
 		["StartButton", "menu_start"],
 		["AcademyButton", "menu_academy"],
-		["CodexButton", "menu_codex"],
 		["QuitButton", "menu_quit"],
 	]
 	for pair in cases:

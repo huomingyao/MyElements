@@ -13,6 +13,9 @@ signal collected(substance_id: String)
 
 const PROMPT_ID: String = "prompt_interact"
 
+# 背包满提示字幕 id（SPEC-05 §3.2 机制提示，文案走 tips.json）。
+const TIP_INVENTORY_FULL: String = "sys_inventory_full"
+
 # 漂浮呼吸动画（表现参数，非 SPEC-02 §4 调参项）。
 const FLOAT_AMPLITUDE: float = 4.0
 const FLOAT_HALF_PERIOD: float = 0.9
@@ -84,7 +87,9 @@ func interact(player: Node) -> void:
 		return
 	var leftover: int = int(inventory.add_item(substance_id, 1))
 	if leftover > 0:
-		# 背包满：留在原地，不静默丢弃（FR-G-02 AC2 的联动语义）。
+		# 背包满：留在原地，不静默丢弃（FR-G-02 AC2 的联动语义）；
+		# 字幕提示满格（2026-08-03 反馈补强，SPEC-05 §3.2 sys_inventory_full），不许无反应。
+		_show_tip(TIP_INVENTORY_FULL)
 		return
 	_picked = true
 	_play_pickup_sound()

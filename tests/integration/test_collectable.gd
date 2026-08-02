@@ -216,6 +216,34 @@ func test_pickup_blocked_when_inventory_full() -> void:
 	assert_true(bool(node.can_interact()), "背包满时仍可交互（之后再捡）")
 
 
+# AC2 反馈补强（2026-08-03，SPEC-05 §3.2 sys_inventory_full）：背包满拾取失败
+# 要给玩家看得见的提示，不许静默无反应；满格但同物质可堆叠时不得误报。
+func test_full_inventory_pickup_shows_warning_tip() -> void:
+	var node: Node = await _spawn("o2")
+	if node == null:
+		return
+	var player: FakePlayer = _make_player()
+	for i: int in range(player.inventory.slot_count()):
+		player.inventory.add_item("c", player.inventory.stack_limit())
+	node.interact(player)
+	assert_true(tip.is_shown("sys_inventory_full"), "背包满拾取失败应触发 sys_inventory_full 字幕")
+
+
+# 堆叠感知：8 格占满但 o2 已在包内且堆叠有空间时，拾取照常成功、不误报满。
+func test_full_slots_but_stackable_pickup_succeeds() -> void:
+	var node: Node = await _spawn("o2")
+	if node == null:
+		return
+	var player: FakePlayer = _make_player()
+	var ids: Array[String] = ["o2", "h2", "c", "s", "co", "h2o", "caco3", "fe"]
+	for id: String in ids:
+		player.inventory.add_item(id, 1)
+	node.interact(player)
+	assert_eq(player.inventory.count_of("o2"), 2, "同物质堆叠有空间时应拾取成功")
+	assert_true(node.is_queued_for_deletion(), "拾取成功后采集物应消失")
+	assert_false(tip.is_shown("sys_inventory_full"), "可堆叠时不应误报背包满")
+
+
 # AC4：数据表中不存在的 id 不崩溃，输出警告且不可交互。
 func test_unknown_id_does_not_crash() -> void:
 	var node: Node = await _spawn("no_such_substance")

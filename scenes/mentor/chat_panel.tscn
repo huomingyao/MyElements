@@ -43,6 +43,7 @@ horizontal_scroll_mode = 0
 [node name="HistoryList" type="VBoxContainer" parent="Panel/Root/Right/HistoryScroll"]
 unique_name_in_owner = true
 size_flags_horizontal = 3
+theme_override_constants/separation = 6
 
 [node name="Bottom" type="HBoxContainer" parent="Panel/Root/Right"]
 

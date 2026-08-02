@@ -22,9 +22,9 @@ texture = ExtResource("3")
 [node name="MenuBox" type="VBoxContainer" parent="."]
 anchors_preset = 8
 anchor_left = 0.5
-anchor_top = 0.62
+anchor_top = 0.66
 anchor_right = 0.5
-anchor_bottom = 0.62
+anchor_bottom = 0.66
 offset_left = -120.0
 offset_top = -109.0
 offset_right = 120.0
@@ -41,12 +41,6 @@ custom_minimum_size = Vector2(220, 44)
 size_flags_horizontal = 4
 
 [node name="AcademyButton" type="Button" parent="MenuBox"]
-unique_name_in_owner = true
-layout_mode = 2
-custom_minimum_size = Vector2(220, 44)
-size_flags_horizontal = 4
-
-[node name="CodexButton" type="Button" parent="MenuBox"]
 unique_name_in_owner = true
 layout_mode = 2
 custom_minimum_size = Vector2(220, 44)

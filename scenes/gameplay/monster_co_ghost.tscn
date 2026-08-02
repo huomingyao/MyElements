@@ -1,9 +1,33 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://scenes/gameplay/monster_co_ghost.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/art/monsters/co_ghost/idle_0.png" id="2_idle0"]
+[ext_resource type="Texture2D" path="res://assets/art/monsters/co_ghost/idle_1.png" id="3_idle1"]
+[ext_resource type="Texture2D" path="res://assets/art/monsters/co_ghost/idle_2.png" id="4_idle2"]
+[ext_resource type="Texture2D" path="res://assets/art/monsters/co_ghost/idle_3.png" id="5_idle3"]
 
 [sub_resource type="CircleShape2D" id="contact_shape"]
 radius = 12.0
+
+[sub_resource type="SpriteFrames" id="anims"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("2_idle0")
+}, {
+"duration": 1.0,
+"texture": ExtResource("3_idle1")
+}, {
+"duration": 1.0,
+"texture": ExtResource("4_idle2")
+}, {
+"duration": 1.0,
+"texture": ExtResource("5_idle3")
+}],
+"loop": true,
+"name": &"idle",
+"speed": 5.0
+}]
 
 [node name="MonsterCoGhost" type="Node2D"]
 script = ExtResource("1")
@@ -13,23 +37,35 @@ unique_name_in_owner = true
 
 [node name="Glow" type="Polygon2D" parent="Visuals"]
 unique_name_in_owner = true
+visible = false
 color = Color(0.6, 0.6, 0.6, 0.18)
 polygon = PackedVector2Array(-14, 0, 0, -14, 14, 0, 0, 14)
 
 [node name="Body" type="Polygon2D" parent="Visuals"]
 unique_name_in_owner = true
+visible = false
 color = Color(0.6, 0.6, 0.6, 0.5)
 polygon = PackedVector2Array(-8, -10, 8, -10, 8, 6, 4, 10, 0, 6, -4, 10, -8, 6)
 
 [node name="EyeL" type="Polygon2D" parent="Visuals"]
 unique_name_in_owner = true
+visible = false
 color = Color(0.9, 0.95, 1, 1)
 polygon = PackedVector2Array(-4.5, -6, -3, -7.5, -1.5, -6, -3, -4.5)
 
 [node name="EyeR" type="Polygon2D" parent="Visuals"]
 unique_name_in_owner = true
+visible = false
 color = Color(0.9, 0.95, 1, 1)
 polygon = PackedVector2Array(1.5, -6, 3, -7.5, 4.5, -6, 3, -4.5)
+
+[node name="AnimSprite" type="AnimatedSprite2D" parent="Visuals"]
+unique_name_in_owner = true
+position = Vector2(0, -3)
+scale = Vector2(0.113, 0.113)
+sprite_frames = SubResource("anims")
+animation = &"idle"
+autoplay = "idle"
 
 [node name="ContactArea" type="Area2D" parent="."]
 unique_name_in_owner = true

@@ -61,12 +61,12 @@ func test_card_popup_is_proportional_and_centered() -> void:
 	_assert_centered_proportional(panel, 0.80, 0.70)
 
 
-# AC2：主菜单按钮组水平居中、垂直位于视口 62%（中间偏下），不依赖 640×360 固定偏移。
+# AC2：主菜单按钮组水平居中、垂直位于视口 66%（中间偏下），不依赖 640×360 固定偏移。
 func test_main_menu_box_is_centered() -> void:
 	var box: Control = await _mount("res://scenes/main/main_menu.tscn", "MenuBox")
 	var r: Rect2 = box.get_rect()
 	assert_almost_eq(r.position.x + r.size.x / 2.0, VIEWPORT_SIZE.x / 2.0, 2.0, "主菜单应水平居中")
-	assert_almost_eq(r.position.y + r.size.y / 2.0, VIEWPORT_SIZE.y * 0.62, 2.0, "主菜单垂直中心应在视口 62%（中间偏下）")
+	assert_almost_eq(r.position.y + r.size.y / 2.0, VIEWPORT_SIZE.y * 0.66, 2.0, "主菜单垂直中心应在视口 66%（中间偏下）")
 
 
 # AC2：暂停菜单按钮组相对视口居中。

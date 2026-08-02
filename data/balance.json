@@ -19,8 +19,8 @@
     "tutorial_oxygen_hint_at": 70.0
   },
   "daynight": {
-    "day_duration": 360.0,
-    "night_duration": 180.0,
+    "day_duration": 120.0,
+    "night_duration": 60.0,
     "night_brightness": 0.35,
     "dark_view_radius": 80.0,
     "torch_view_radius": 220.0

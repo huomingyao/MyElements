@@ -163,8 +163,14 @@ const EXACT_COUNTS: Dictionary = {
 # ---- 第 9 类：导师 prompt ----
 const MONITOR_ID: String = "monitor"
 const DISPATCH_KEYWORDS: Array[String] = ["@化学老师", "@思维老师", "@助理"]
-const NO_AT_CLAUSE: String = "回答里绝不出现 @。"
+# @ 使用约束（2026-08-03 重构）：转介时可 @ + 正文绝不 @，两关键字齐备才算合规。
+const AT_HANDOFF_CLAUSE: String = "转介"
+const AT_NEVER_CLAUSE: String = "回答正文绝不出现 @"
 const AT_SIGN: String = "@"
+# 转介语模板占位符（SPEC-05 §4.4）。
+const HANDOFF_PLACEHOLDER: String = "{mention}"
+# 专长分类枚举（SPEC-04 §5）。
+const EXPERTISE_CATEGORIES: Array[String] = ["combat", "learning", "chemistry", "other"]
 # SPEC-04 §5：数组顺序即分类优先级，逐位比对。
 const DISPATCH_CATEGORIES: Array[String] = ["combat", "learning", "chemistry", "other"]
 const DISPATCH_FIELDS: Array[String] = [F_CATEGORY, F_KEYWORDS, F_TARGETS, F_LINE]
@@ -184,7 +190,7 @@ const UI_STRING_KEYS: Array[String] = [
 	"config_apply", "chat_config",
 	"hud_day", "hud_night", "hud_oxygen", "hud_energy", "hud_health",
 	"pause_title", "pause_continue", "pause_to_menu",
-	"menu_map", "chat_send", "chat_close",
+	"menu_map", "chat_send", "chat_close", "chat_player_label",
 	"craft_title", "craft_tool_portable", "craft_tool_lamp", "craft_tool_bench",
 	"craft_cancel", "craft_slot_empty", "inventory_title",
 	"inventory_craft_hint",
@@ -746,13 +752,50 @@ static func _check_mentor_prompts(
 						"%s：导师 id「%s」的 %s 缺调度关键字「%s」"
 						% [T_MENTORS, id, F_SYSTEM_PROMPT, keyword]
 					)
-		elif not prompt.contains(NO_AT_CLAUSE):
+		elif not prompt.contains(AT_HANDOFF_CLAUSE) or not prompt.contains(AT_NEVER_CLAUSE):
 			errors.append(
-				"%s：导师 id「%s」的 %s 缺约束「%s」"
-				% [T_MENTORS, id, F_SYSTEM_PROMPT, NO_AT_CLAUSE]
+				"%s：导师 id「%s」的 %s 缺 @ 使用约束（转介时可 @ + 正文绝不 @，2026-08-03 口径）"
+				% [T_MENTORS, id, F_SYSTEM_PROMPT]
 			)
 	_check_mentions(tables, errors)
 	_check_dispatch(tables, errors)
+	_check_expertise_and_handoff(tables, errors)
+
+
+# SPEC-04 §5（2026-08-03 重构）：expertise 非空、元素在四类枚举内、非 monitor 不得全类覆盖；
+# handoff_line 非 monitor 必填、含 {mention}、不含 @；monitor 不得有 handoff_line。
+static func _check_expertise_and_handoff(tables: Dictionary, errors: Array) -> void:
+	for row_value in _rows(tables, T_MENTORS):
+		var row: Dictionary = row_value as Dictionary
+		var id: String = _id_of(row)
+		var expertise: Array = row.get("expertise", []) as Array
+		if expertise.is_empty():
+			errors.append("%s：导师 id「%s」缺 expertise 或为空（转介判定来源）" % [T_MENTORS, id])
+		for category in expertise:
+			if not EXPERTISE_CATEGORIES.has(str(category)):
+				errors.append(
+					"%s：导师 id「%s」的 expertise 含非法分类「%s」" % [T_MENTORS, id, str(category)]
+				)
+		if id != MONITOR_ID and expertise.size() >= EXPERTISE_CATEGORIES.size():
+			errors.append(
+				"%s：导师 id「%s」的 expertise 覆盖全部四类，转介机制将失效" % [T_MENTORS, id]
+			)
+		var handoff: String = str(row.get("handoff_line", ""))
+		if id == MONITOR_ID:
+			if row.has("handoff_line"):
+				errors.append("%s：monitor 不该有 handoff_line（转介语走 dispatch.line）" % T_MENTORS)
+			continue
+		if handoff.strip_edges().is_empty():
+			errors.append("%s：导师 id「%s」缺 handoff_line（SPEC-05 §4.4）" % [T_MENTORS, id])
+			continue
+		if not handoff.contains(HANDOFF_PLACEHOLDER):
+			errors.append(
+				"%s：导师 id「%s」的 handoff_line 缺 %s 占位" % [T_MENTORS, id, HANDOFF_PLACEHOLDER]
+			)
+		if handoff.contains(AT_SIGN):
+			errors.append(
+				"%s：导师 id「%s」的 handoff_line 不该自带 @（由代码拼接）" % [T_MENTORS, id]
+			)
 
 
 # SPEC-04 §5：mention 是 parse_mentions 的 @句柄 → 导师 id 映射来源。

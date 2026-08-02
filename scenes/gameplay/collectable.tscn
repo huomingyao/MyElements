@@ -18,6 +18,7 @@ color = Color(1, 1, 1, 0.9)
 [node name="IconSprite" type="Sprite2D" parent="Visuals"]
 unique_name_in_owner = true
 visible = false
+scale = Vector2(0.5, 0.5)
 
 [node name="Shape" type="CollisionShape2D" parent="."]
 shape = SubResource("pickup_shape")

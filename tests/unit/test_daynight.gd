@@ -1,4 +1,4 @@
-# UT-C04 / FR-C-04：昼夜时钟由 tick(delta) 推进——360s 进夜、再 180s 回昼；
+# UT-C04 / FR-C-04：昼夜时钟由 tick(delta) 推进——120s 进夜、再 60s 回昼；
 # day_started/night_started 各一次；day_count 清晨递增；清晨发 resources_respawned；时长读自 balance。
 extends GutTest
 
@@ -27,8 +27,8 @@ func before_each() -> void:
 
 # AC2：白天/夜晚时长读自 balance.json。
 func test_durations_come_from_balance() -> void:
-	assert_almost_eq(day_duration, 360.0, 0.001, "白天时长应为 balance 里的 360 秒")
-	assert_almost_eq(night_duration, 180.0, 0.001, "夜晚时长应为 balance 里的 180 秒")
+	assert_almost_eq(day_duration, 120.0, 0.001, "白天时长应为 balance 里的 120 秒")
+	assert_almost_eq(night_duration, 60.0, 0.001, "夜晚时长应为 balance 里的 60 秒")
 
 
 func test_starts_in_daytime() -> void:

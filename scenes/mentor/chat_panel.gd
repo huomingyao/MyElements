@@ -25,6 +25,12 @@ const UI_SEND_KEY: String = "chat_send"
 const UI_CLOSE_KEY: String = "chat_close"
 # 设置入口按钮文案（包A-3：ConfigPanel 可达性，FR-M-10）。
 const UI_CONFIG_KEY: String = "chat_config"
+# 玩家行前缀（2026-08-03 着色增强）：与导师名对称的「我」标签，文案在 ui_strings。
+const UI_PLAYER_LABEL_KEY: String = "chat_player_label"
+
+# 对话行配色（表现参数，非调参项）：导师名金色加粗、玩家行淡蓝，一眼区分问答双方。
+const COLOR_MENTOR_NAME: String = "#ffd54a"
+const COLOR_PLAYER: String = "#8fd3ff"
 # ui_manager 面板名（SPEC-03 §8）：本聊天框与配置面板。
 const PANEL_CONFIG: String = "config"
 # 世界总装里的裁决器（world.tscn 的 UILayer/UIManager），按祖先链惰性解析。
@@ -67,7 +73,7 @@ var _avatar_mode: String = MODE_IDLE
 var _pending_mentor_id: String = ""
 # 打字跳过：请求标记 + 当前行的完整文本与标签引用（skip_typing 同步补全用）。
 var _skip_typing: bool = false
-var _typing_label: Label = null
+var _typing_label: RichTextLabel = null
 var _typing_speaker: String = ""
 var _typing_full: String = ""
 
@@ -171,7 +177,7 @@ func skip_typing() -> void:
 		return
 	_skip_typing = true
 	if _typing_label != null and is_instance_valid(_typing_label):
-		_typing_label.text = _line_text(_typing_speaker, _typing_full)
+		_finalize_mentor_line(_typing_label, _typing_speaker, _typing_full)
 		_scroll_to_bottom()
 
 
@@ -253,10 +259,12 @@ func _type_all(messages: Array) -> void:
 
 
 # 逐字打字（AC2）：每帧追加一个字符，速度可调；收到跳过请求时立即补全整行。
+# 打字中途行保持纯文本（不含 bbcode），整行说完才着色——
+# 跳过打字的中途长度断言依赖纯文本态（2026-08-03 着色增强的回归约束）。
 func _type_line(speaker: String, text: String) -> void:
 	_typing = true
 	_skip_typing = false
-	var label: Label = _append_line(speaker, "", false)
+	var label: RichTextLabel = _append_line(speaker, "", false)
 	_typing_label = label
 	_typing_speaker = speaker
 	_typing_full = text
@@ -273,22 +281,57 @@ func _type_line(speaker: String, text: String) -> void:
 		var per_char: float = 1.0 / maxf(typing_chars_per_second, MIN_TYPING_SPEED)
 		if per_char > 0.0001:
 			await get_tree().create_timer(per_char).timeout
+	if _open and not _skip_typing:
+		_finalize_mentor_line(label, speaker, text)
 	_typing_label = null
 	_typing_full = ""
 	_skip_typing = false
 	_typing = false
 
 
-func _append_line(speaker: String, text: String, is_player: bool) -> Label:
-	var label: Label = Label.new()
+# 对话行（2026-08-03 着色增强）：RichText + bbcode。
+# 玩家行右对齐、整体着色、带「我」前缀，一次成稿；导师行先纯文本打字、说完着色。
+func _append_line(speaker: String, text: String, is_player: bool) -> RichTextLabel:
+	var label: RichTextLabel = RichTextLabel.new()
+	label.bbcode_enabled = true
+	label.fit_content = true
+	label.scroll_active = false
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	if is_player:
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	label.text = _line_text(speaker, text)
+		label.text = _player_line_bbcode(text)
+	else:
+		label.text = _line_text(speaker, text)
 	_list.add_child(label)
 	_scroll_to_bottom()
 	return label
+
+
+# 导师行定稿：姓名金色加粗 + 正文，双方内容都过 bbcode 转义（注入安全）。
+func _finalize_mentor_line(label: RichTextLabel, speaker: String, full_text: String) -> void:
+	if label == null or not is_instance_valid(label):
+		return
+	if speaker.is_empty():
+		label.text = _escape_bbcode(full_text)
+	else:
+		label.text = "[color=%s][b]%s[/b][/color]: %s" % [
+			COLOR_MENTOR_NAME, _escape_bbcode(speaker), _escape_bbcode(full_text)
+		]
+
+
+# 玩家行成稿：整体淡蓝 + 「我」前缀加粗（前缀文案在 ui_strings，NFR-04）。
+func _player_line_bbcode(text: String) -> String:
+	var prefix: String = _ui_string(UI_PLAYER_LABEL_KEY)
+	var body: String = _escape_bbcode(text)
+	if prefix.is_empty():
+		return "[color=%s]%s[/color]" % [COLOR_PLAYER, body]
+	return "[color=%s][b]%s[/b]: %s[/color]" % [COLOR_PLAYER, _escape_bbcode(prefix), body]
+
+
+# bbcode 注入防护：玩家输入与 LLM 回复里的方括号一律转义，只作文本渲染。
+func _escape_bbcode(text: String) -> String:
+	return text.replace("[", "[lb]")
 
 
 func _line_text(speaker: String, text: String) -> String:

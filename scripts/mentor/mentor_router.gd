@@ -6,7 +6,7 @@ extends RefCounted
 
 const Suffix: GDScript = preload("res://scripts/mentor/prompt_suffix.gd")
 
-# ==== 常量区 ====
+# ==== 常量区 ===
 const TABLE_FILE: String = "mentors.json"
 const MONITOR_ID: String = "monitor"
 # 零命中时的兜底分类；数据表里有 keywords 为空的那一项时以表为准。
@@ -44,7 +44,7 @@ const H_ANSWER: String = "answer"
 const LLM_PATH: NodePath = ^"LLMClient"
 const LLM_ASK: String = "ask"
 
-# ==== 状态区 ====
+# ==== 状态区 ===
 var _by_id: Dictionary = {}
 var _mention_to_id: Dictionary = {}
 var _dispatch: Array = []
@@ -57,7 +57,7 @@ var _last_offline: bool = false
 var _history: Dictionary = {}
 
 
-# ==== 逻辑区 ====
+# ==== 逻辑区 ===
 func _init() -> void:
 	load_from(DataLoader.load_table(TABLE_FILE, TYPE_ARRAY, []) as Array)
 

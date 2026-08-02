@@ -72,6 +72,7 @@ var _current_target: Node = null
 @onready var _prompt: Label = %PromptBubble
 @onready var _light: PointLight2D = %ViewLight
 @onready var _camera: Camera2D = %Camera
+@onready var _body: Sprite2D = %BodyVisual
 
 
 func _ready() -> void:
@@ -154,6 +155,8 @@ func _apply_movement() -> void:
 	velocity.x = direction * speed
 	if not is_zero_approx(direction):
 		facing = signi(direction)
+		# 侧视图贴图朝右，朝左移动时水平翻转。
+		_body.flip_h = facing < 0
 	# 起跳 = 缓冲窗口内按过跳 + （着地 或 coyote 窗口内）；起跳后两计时清零防二段。
 	if _jump_buffer_timer > 0.0 and _coyote_timer > 0.0:
 		velocity.y = jump_velocity

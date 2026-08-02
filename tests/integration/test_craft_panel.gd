@@ -132,6 +132,20 @@ func test_success_craft_consumes_and_shows_card() -> void:
 		assert_false(str(cards[0].get("footer", "")).is_empty(), "卡片底行非空（card_footer）")
 
 
+# FR-G-05 AC5：材料入格后格子显示资源图标（同背包口径），不是只有文字。
+func test_slot_shows_item_icon_after_add_material() -> void:
+	if _skip_unless_ready(["add_material", "slot_icon_texture"]):
+		return
+	_inventory.add_item("o2", 1)
+	_panel.add_material("o2")
+	var tex: Texture2D = _panel.slot_icon_texture(0)
+	assert_not_null(tex, "入格后格子应显示资源图标")
+	if tex != null:
+		assert_true(tex.get_width() > 0, "图标不应是空图")
+	# 空格无图标
+	assert_eq(_panel.slot_icon_texture(1), null, "空格不显示图标")
+
+
 # AC2：完全不匹配 → 失败字幕（数据表文案），材料不消耗。
 func test_no_match_fail_keeps_materials_and_shows_message() -> void:
 	if _skip_unless_ready(["add_material", "react"]):

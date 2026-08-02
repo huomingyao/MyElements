@@ -3,9 +3,9 @@
 > **本文件是续作入口。** 新会话开工顺序：读本文件 → `docs/SPEC.md`（Checklist 与索引）→ 任务涉及的分册。
 > 状态口径：✅ = 实现 + 自动化测试全绿；⚠️ = 实现但有人工/实机验证缺口；❌ = 未做。
 
-- 最近更新：2026-08-02（主菜单按钮组下移至中间偏下，MenuBox 垂直锚点 0.5→0.62，FR-U-06 AC2/IT-U06 口径同步）
-- 测试基线：`./run_tests.sh` **672/672 全绿**（2026-08-02 复验，含 IT-U06 主菜单中间偏下断言更新）；`./validate_data.sh` **DATA OK**（仅 P4 美术未交付的路径警告）
-- 冒烟基线：主场景与 `world.tscn` headless 各跑 120/180 帧零 script error（2026-08-02 复验）
+- 最近更新：2026-08-03（导师协作链重构：直接首接 + 导师间转介，FR-M-04 规格变更；聊天框 RichText 着色；背包满拾取提示）
+- 测试基线：`./run_tests.sh` **727/727 全绿**（2026-08-03 复验，含真实 LLMClient 离链路死空气回归两条）；`./validate_data.sh` **DATA OK**（仅 P4 美术未交付的路径警告）
+- 冒烟基线：主场景 headless 240 帧零 script error（2026-08-03 复验）
 - 本机约束：**godot_mcp 未注册**（可见行为无法实机截图验证）；**superpowers/godot-prompter 技能未注册**（按同等纪律手动执行 SSD+TDD）
 
 ---
@@ -45,6 +45,7 @@
 | 背包/合成面板宝箱美术 | `panels.png` 切分为 `inventory_bg.png`/`craft_bg.png`（`assets/art/ui/`）；两面板改 Control+Bg(TextureRect) 底图、控件锚点对准底图格子、按钮 flat；面板比例按底图调整为背包 51%×83%、合成 34%×89%（FR-U-06 AC1 / IT-U06 / SPEC-03 §9 同步） | 见下方验证结果 |
 | 背包内合成快捷入口（FR-G-05 AC4） | 新增输入动作 `craft`（X 键）；`inventory_panel` 新增 `craft_requested` 信号（仅背包打开时触发）+ `%HintLabel` 底部提示（ui_strings `inventory_craft_hint`）；world 接线 `craft_requested → ui_manager.open("craft")` 互斥切换；合成台 E 入口保留 | IT-U05 新增 2 项，674/674 全绿 + DATA OK |
 | 背包+合成台同屏并列与拖拽合成（FR-G-05 AC5） | ui_manager 改 `_open_order` 栈 + `register_panel` 增 `group` 可选参（SPEC-03 §8 修订：默认互斥、同组可并列，Esc 逐层关最上）；背包靠左/合成台靠右互不遮挡（FR-U-06 AC1 口径）；两面板根 `mouse_filter=IGNORE` + craft 可见区域 `set_drag_forwarding` 转发拖放——背包材料直接拖入合成界面；合成台 E 交互同时打开背包+合成台；X 键 toggle 合成台 | IT-U05/仲裁/U06/test_world 新增与改写 9 项，686/687（唯一红为并行会话 MentorRoom 改造中的 x=300 学院区域断言）+ DATA OK |
+| 合成格子与拖拽预览显示资源图标 | craft_panel 材料格新增 Icon 节点，真实图标优先、缺失回退散列色占位（`slot_icon_texture` 观测口）；inventory 拖拽预览同样真实图标优先——拖资源时跟随鼠标的是资源本身不是色块 | IT-G05/IT-U05 各新增 1 项，694/695（唯一红为并行会话相机/复活域全量序偶发，单跑 35/35 全绿）+ DATA OK |
 
 文档状态：SPEC-03 §9 变更记录已同步至 2026-08-02 全部批次；SPEC.md v1.2；SPEC-01 FR-G-10 增 AC5、FR-C-08 AC1 记 D2；SPEC-04 §10 effect 枚举增 immune_co；SPEC-05 §1/§3.2/§8、SPEC-02 §4.4/§5、SPEC-08 §6、SPEC-09 §3.1 已同步。
 
@@ -130,3 +131,6 @@ B1 氧气 70 提示（D6 新增 sys_oxygen_tutorial）、B2 拾取音效挂载�
 | 2026-08-02 | 对标优化批次（docs/PLAN-benchmark-optimization.md）：Wave 1 五包 27 项修复与增强落地（包A 手感 9 项 / 包B 数值逻辑 5 项 / 包C 导师与文案 6 项 / 包D 数据与图鉴 3 项 / 包E HUD 与面板 3 项，另含包C 契约配套）；Wave 2 三收口代理并行（W1 代码集成、W2 nahco3 产出、W3 文档同步）。BUGS.md 登记 B-005..B-030 已修复、B-031..B-038 新发现（2 修复中、2 open、4 记赛后清单）；SPEC 同步至 v1.3 |
 | 2026-08-02 | 五路并行审计 + 包D「spec 文档回写」（以码为准，只改文档）：配方 12 / tips 51 / qa_fallback 34 / fail_messages 9 条数全册对齐；新增 FR-G-16 CuSO₄ 溶液池（B-001 升格，54→55 条 FR，P1/IT-G16，P3 阶段补做）；SPEC-02 `night_tint`→`night_brightness`；FR-M-05 AC1 改按 SPEC-03 口径（≤3 条）；FR-M-10 AC2 按 B-024 裁决（隐藏死 UI 滑块 + config_note）；SPEC-05 §5 补登 9 条 qa、§2 失败池补全 9 条并标注 fail_copper_acid 彩蛋；SPEC-07 §6 收录七条对标大件（赛后清单输出 ✅）；B-035..B-038 转赛后清单；BUGS.md 登记 B-039..B-045（审计 7 项代码偏差，包A/B/C 修复中）；测试基线 547→610；SPEC 同步至 v1.4，SPEC-03 §9 为包A/B/C 预留四行占位 |
 | 2026-08-02 | 包E3「文档收口」（只改文档，同步到与代码一致）：BUGS.md B-039..B-045 七条标 fixed 并补修复摘要；SPEC-03 §9 四行占位展开为正式变更记录 + 补 config 面板注册与 ui_strings 两键两行；SPEC-05 §9 补登 `config_apply`/`chat_config`；SPEC-01 FR-M-10 AC1 补游戏内入口；§1 追加审计修复批次行；F6 标 fixed；测试基线 610→650；SPEC 同步至 v1.6 |
+| 2026-08-03 | FR-C-10 区域相机钳制与边界幕布（用户需求：触碰地图边缘才黑屏切图，此前看不到其他地图）：world `ZONE_CAMERA_BOUNDS` 按区钳制相机（出生草原、zone_changed 切换+snap）、`_travel_lock` 过场锁输入；black_hole 新增 `travel_started` 信号 + `_teleport` 调 `reset_camera_smoothing`；白盒图四条边界全高黑幕布（x=-700/-150/600/1375）；包A-4 复活用例改断言营地钳位点（床 x=1240 超出营地中心域 [920,1030]，等 8 帧待切区）；IT-C10 六用例（test_world ×4 + test_black_hole ×2）先 RED 后 GREEN；SPEC-01/02/03/06/SPEC.md v2.3 同步。全量 695/695 全绿、DATA OK、主场景冒烟零错；幕布观感与过场手感未能实机验证（godot_mcp 未注册），归人工 MT |
+| 2026-08-03 | 黑洞视觉移除（用户拍板）：black_hole 改纯隐形边缘触发器（黑核/紫环/脉动 Tween 全删，只剩 Shape），边界观感由幕布承担；传送/过场/锁输入逻辑不变。test_black_hole 视觉用例反转为 test_has_no_visuals（先 RED 后 GREEN）；SPEC-03 §9 同步。全量 701/701 全绿 |
+| 2026-08-03 | FR-C-10 v2 等宽画布重排（用户拍板：画布不一样长要解决、两侧不露黑边）：四区统一 1000px 宽紧凑重排（草原 +60 / 营地 -180 / 矿洞 +80 / 盐湖不动），区间 60px 缝；相机钳制下屏幕恒被当前区画布铺满，黑边消除，幕布方案废弃移除；边界 4 触发器缩为 3（x=-670/390/1450）；白盒图背景/河流/地面/右墙/21 个采集点、world.tscn 触发器/7 设施/商人/路牌/幽灵×2/CuSO₄ 池/黑洞、world.gd 五常量、test_world 区域矩形与坐标全量同步；test_boundary_curtains_exist → test_zone_backgrounds_uniform_width（先 RED 7 项失败，后 GREEN）；SPEC-01 FR-C-10 改题/AC2 v2、SPEC-02 §3、SPEC-03 §9、SPEC-06 IT-C10、SPEC.md v2.4 同步。全量 705/705 全绿、DATA OK、冒烟零错；实机观感未验证（godot_mcp 未注册） |

@@ -45,6 +45,7 @@ var _alive_seconds: float = 0.0
 @onready var _body: Polygon2D = %Body
 @onready var _core: Polygon2D = %Core
 @onready var _glow: Polygon2D = %Glow
+@onready var _anim_sprite: AnimatedSprite2D = %AnimSprite
 
 
 func _ready() -> void:
@@ -76,6 +77,9 @@ func charge_step(delta: float, target_pos: Vector2) -> void:
 		return
 	if not _has_lock:
 		redirect(target_pos)
+	# 贴图朝右为基准，向左冲时水平翻转。
+	if _anim_sprite != null and not is_zero_approx(_charge_dir.x):
+		_anim_sprite.flip_h = _charge_dir.x < 0.0
 	global_position += _charge_dir * charge_speed() * delta
 
 
