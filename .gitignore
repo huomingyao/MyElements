@@ -17,3 +17,6 @@ config.cfg
 Thumbs.db
 desktop.ini
 .DS_Store
+
+# Windows 快捷方式
+*.lnk
