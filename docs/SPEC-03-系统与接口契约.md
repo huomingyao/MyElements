@@ -200,29 +200,22 @@ Player（CharacterBody2D，player.gd）
 | `classify(question: String) -> String` | 返回 `"combat"/"learning"/"chemistry"/"other"` |
 | `route_targets(category: String) -> Array[String]` | 返回被派导师 id 数组，如 `["think","assistant"]` |
 | `parse_mentions(text: String) -> Array[String]` | 解析回复中的 @xx → 导师 id 数组 |
-| `expertise_of(mentor_id: String) -> Array[String]` | 该导师的专长分类数组（2026-08-03 重构新增；未知 id 返回空数组） |
-| `handle_message(question: String, first_mentor_id: String = "monitor") -> Array[Dictionary]` | 完整一轮对话，返回消息序列；首接 = `first_mentor_id`（2026-08-03 重构） |
+| `handle_message(question: String) -> Array[Dictionary]` | 完整一轮对话，返回消息序列 |
 
 `handle_message` 返回结构：
 
 ```gdscript
 [
-  {"mentor_id": "chem", "text": "2H₂ + O₂ =点燃= 2H₂O……",                "offline": false},
-  {"mentor_id": "chem", "text": "这超出我的讲台了，@思维老师 你来。", "offline": false},
-  {"mentor_id": "think", "text": "对付酸雾要用中和的思路……",            "offline": false}
+  {"mentor_id": "monitor", "text": "别慌…… @化学老师 你来把原理讲透！", "offline": false},
+  {"mentor_id": "chem",    "text": "2H₂ + O₂ =点燃= 2H₂O……",        "offline": false}
 ]
 ```
 
-**流程（FR-M-04，2026-08-03 重构）**：
-1. 首接 = `first_mentor_id`（聊天框当前导师；无注入时调用方传 `"monitor"` 总台）。
-2. `classify(question)` 命中的分类 ∈ 首接导师 `expertise` → 首接导师直接回答，返回 1 条。
-3. 不在 → 首接导师说 `handoff_line`（`{mention}` 填 `route_targets(category)` 首位导师的 mention），随后被转介导师回答。首接导师不硬答非专长内容。
-
 **硬约束（对应 FR-M-05）**：
-- 第一条消息的 `mentor_id` **必须**是 `first_mentor_id`。
-- 返回数组长度 ≤ 3（首接 + 最多 2 个被转介者，"学习方法类"转两位时为 3）。
-- 只解析首接消息中的 @；其他导师消息中的 @ 一律忽略（不触发新一轮）。
-- 转介深度硬上限 1 次 + qa 归属改道硬上限 1 次（2026-08-03，防死空气），代码层面用计数器保证，不依赖 prompt 自觉。
+- 第一条消息的 `mentor_id` **必须**是 `"monitor"`。
+- 返回数组长度 ≤ 3（班主任 + 最多 2 个被派老师，"学习方法类"派两位时为 3）。
+- 只解析 `monitor` 消息中的 @；其他导师消息中的 @ 一律忽略（不触发新一轮）。
+- 递归深度硬上限 1 次调度，代码层面用计数器保证，不依赖 prompt 自觉。
 
 **非契约辅助**（TP-14 落地新增，不属冻结面，调用方勿依赖）：
 
@@ -299,7 +292,6 @@ key 读取顺序（NFR-05 不变：绝不进 res://、绝不进日志）：①�
 | 签名 | 说明 |
 |---|---|
 | `answer(question: String) -> String` | 关键词命中最多者胜；平票取表中先出现者；零命中返回班主任固定话术 |
-| `answer_for(mentor_id: String, question: String) -> Dictionary` | 归属匹配（2026-08-03 重构新增）：返回 `{text, owner_id}`——最佳命中行归属 `mentor_id` 时 `text` 为答案、`owner_id == mentor_id`；归属其他导师时 `text` 为空、`owner_id` 为归属导师（供 router 转介）；零命中 `text` 为兜底行话术、`owner_id` 为兜底行 mentor |
 | `match_score(question: String, keywords: Array) -> int` | 命中关键词数（供测试直接断言） |
 
 离线回答由调用方统一追加「（离线模式）」后缀，**不在数据表里写这个后缀**。
@@ -386,7 +378,6 @@ World（scenes/main/world.tscn，P1）
 | 2026-08-02 | TP-14 新增两个 `scripts/mentor/` **纯逻辑类**（**不属冻结面**，不是 autoload，可被单测直接实例化，见 §6.1 / §6.1.1）：`mentor_router.gd`（§6.1 四个契约方法 + 非契约辅助 `load_from` / `set_reply_provider` / `dispatch_count` / `system_prompt_for`；分类关键词、派活对象、调度语、人设全部读自 `mentors.json`，代码里零内容文本）、`prompt_suffix.gd`（SPEC-04 §6 通用后缀 `text()` / `append_to()`，唯一允许写 prompt 文本的文件）。二者只经静态 `DataLoader` 读表、只调用已冻结的 `LLMClient.ask`，未改动 §2..§7 任何签名 | TP-14（FR-M-04/M-05/M-06）实现需要；数据表仍不由场景自读（§1） | P1 |
 | 2026-08-02 | TP-15 §6.2 补齐三处**规格缺口**（均为新增，未改动 §2..§7 已冻结签名）：①「历史只带最近 4 轮」原未定义「一轮」的数据形状，实现只能猜——现约定 `history` 元素为 `{"question", "answer"}`，进请求体展开成 `user`+`assistant` 两条；②「测试通过注入 stub 替换 `_generate_reply()`」在 GDScript 里无法对 autoload 做方法替换——改为在 `_generate_reply()` 内部留唯一发包点 `set_transport(Callable)`，并定义传输层返回形状 `{result, code, body}` 与四种失败的判定口径；③ 端点/模型/鉴权头此前无处记载，现钉在 §6.2「网络常量」。同时补记非契约辅助 `build_request_body` / `attempt_count` / `timeout_seconds` / `retry_count` / `set_timeout_seconds` / `set_retry_count` / `set_qa_fallback`。行为变更：骨架期 `_offline_reply()` 只返回角标，本次改为 `QaFallback.answer()` + 角标 | TP-15（FR-M-07/M-08/M-09）实现与 UT-M08/IT-M07 可测性需要 | P1 |
 | 2026-08-02 | TP-15 新增 `scripts/mentor/qa_fallback.gd`（§6.3 契约 `answer` / `match_score` + 非契约辅助 `load_from` / `best_row` / `mentor_id_for`）。纯逻辑 `RefCounted`，经静态 `DataLoader` 读 `qa_fallback.json`，零命中话术取自表中兜底行（SPEC-04 §7），代码里零玩家可见文案 | TP-15（FR-M-09）实现需要 | P1 |
-| 2026-08-03 | **冻结面变更**：§6.1 `handle_message(question)` → `handle_message(question, first_mentor_id := "monitor")`，首条消息 = 首接导师（不再恒 monitor）；新增契约方法 `expertise_of(mentor_id)`；§6.3 新增契约方法 `answer_for(mentor_id, question) -> {text, owner_id}`（qa 条目按归属导师匹配）。配套流程重构见 SPEC-01 FR-M-04（2026-08-03 版）：直接首接 + 导师间转介，根治"被派导师答非所问" | 用户（P1）裁决的多智能体协同流程重构：找谁聊谁首接，非专长转介不硬答 | P1 |
 | 2026-08-02 | TP-15 新增 §6.4「配置面板占位」：`scenes/mentor/config_panel.tscn` + `config_panel.gd`（**场景层，不属冻结面**）。理由：FR-M-10 只在 SPEC-01/02 里描述了「key 输入框可用 + 滑块可拖不生效 + 明示赛后可配置」，冻结面上没有任何落点，实现无处对齐——现钉住四个方法（`apply_api_key` / `set_offline_toggle` / `personality` / `note_text`）、五个唯一名节点与 NFR-05 口径（`secret = true`、不回显、不记录、只写不读）。同时把 FR-M-08 AC4 的手动离线开关归到本面板。未新增 `ui_strings.json` 键（`config_note` 已在 SPEC-05 §9），未改动 §2..§7 已冻结签名 | TP-15（FR-M-10 / FR-M-08 AC4）实现需要；MT-M10 手工验收的对齐基线 | P1 |
 | 2026-08-02 | TP-05 新增的**非契约**辅助（不属冻结面，调用方勿依赖）：`KnowledgeTip.advance(delta: float)`（唯一时间推进入口，由渲染层在 `_process` 里调；autoload 自身不跑 `_process`）、`current_tip_id()`、`current_text()`、`current_style()`（供渲染层与测试读当前显示状态）。行为变更：骨架期的「入队即立刻出队」改为**真串行队列**——排队中的字幕在上台时才发 `tip_shown`，`warning` 抢占时被打断的字幕直接作废不重播 | TP-05（FR-U-01）实现需要；§3 已冻结的 5 个方法签名与 2 个信号未变 | P1 |
 | 2026-08-02 | TP-08 新增 `scripts/gameplay/hydrogen_event.gd`（**纯逻辑 RefCounted，不属冻结面**：`ignite(items)` / `is_purity_check_available()` / `do_purity_check()` / `unlock_purity_check()` + 信号 `explosion_triggered` / `purity_check_performed`；爆炸伤害读 `balance.json damage.hydrogen_explosion`，解锁走 `debug.force_purity_unlock` 或导师回调）与 `scenes/gameplay/explosion.gd/.tscn`（场景层表现：`bind(event)` 唯一接线，火光 tween + 相机衰减震屏，音效挂载点无 stream 静默跳过）。只调用已冻结的 `RecipeDB.try_craft/build_card`、`GameManager.modify_health/set_flag`、`KnowledgeTip.show`，未改动 §2..§7 任何签名 | TP-08（FR-G-08/G-09）实现需要 | P1 |

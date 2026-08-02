@@ -1,9 +1,9 @@
 # Godot 4+ specific ignores
 .godot/
-/android/
+godot/android/
 
 # 构建产物（SPEC-09 §1：exe 不进 git）
-/build/
+godot/build/
 *.exe
 *.pck
 

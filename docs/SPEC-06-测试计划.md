@@ -97,7 +97,7 @@
 |---|---|---|---|
 | UT-M03 | FR-M-03 | `test_input_sanitize.gd` | >200 字符被截断；控制字符与换行被清理；空输入不发起请求 |
 | UT-M04 | FR-M-04 | `test_mentor_router_classify.gd` | 四类各 ≥3 个样例判定正确；**混合样例按 combat→learning→chemistry→other 优先级归类**；`route_targets` 映射正确（learning 返回两位） |
-| UT-M05 | FR-M-05 | `test_mentor_router_flow.gd` | （2026-08-03 重构）首条消息 `mentor_id` == 首接导师；expertise 命中→直答 1 条、不命中→转介；返回长度 ≤3；非首接消息中的 @ 被忽略；构造循环 @ 不递归不卡死；转介计数硬上限 1 |
+| UT-M05 | FR-M-05 | `test_mentor_router_flow.gd` | 首条消息 `mentor_id=="monitor"`；返回长度 ≤3；非 monitor 消息中的 @ 被忽略；构造循环 @ 不递归不卡死；调度计数硬上限 1 |
 | UT-M06 | FR-M-06 | `test_mentor_prompts.gd` | 代码中无人设字符串（grep 式扫描 `scripts/`）；三位非班主任 prompt 含"绝不出现 @"；通用后缀被拼接 |
 | UT-M08 | FR-M-08 | `test_llm_fallback.gd` | 四种失败（超时/网络错/非 200/畸形 body）都走兜底且不抛异常；重试 1 次；离线回答含「（离线模式）」；手动开关立即生效 |
 | UT-M09 | FR-M-09 | `test_qa_fallback.gd` | 命中数最多者胜；**平票取表中先出现者**；零命中返回班主任话术；离线与联网用同一分类器 |

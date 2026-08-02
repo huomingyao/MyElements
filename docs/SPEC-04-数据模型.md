@@ -181,9 +181,7 @@
 | `catchphrases` | Array[String] | ⬜ | 口头禅（离线模式拼接用） |
 | `system_prompt` | String | ✅ | 人设段，运行时后接通用后缀（§6） |
 | `mention` | String | ✅ | @ 句柄（**不含 `@`**），如 `化学老师`；唯一 |
-| `expertise` | Array[String] | ✅ | 专长分类（2026-08-03 重构新增）：chem=`["chemistry"]`，think=`["combat","learning"]`，assistant=`["learning","other"]`，monitor=`["other"]`；取值来自 dispatch 四类 |
-| `handoff_line` | String | ✅* | 转介语模板（2026-08-03 重构新增）：含 `{mention}` 占位，由代码填目标导师 mention；非专长问题时首接导师只说这一句。*`monitor` 除外——总台的转介语走 `dispatch[*].line` 按分类提供（SPEC-05 §4.3） |
-| `dispatch` | Array[Dictionary] | ⬜ | **仅 `monitor` 有**：全局「问题类别 → 该找谁」路由表（2026-08-03 起为所有导师共用，见下） |
+| `dispatch` | Array[Dictionary] | ⬜ | **仅 `monitor` 有**：班主任调度表，见下 |
 
 `mention` 于 2026-08-02 补入：`title` 不能当 @ 句柄——`think` 的 `title` 是「实用思维老师」，
 而 [SPEC-05 §4.1/§4.3](SPEC-05-内容数据表.md) 与 `monitor.system_prompt` 一致使用 `@思维老师`，
@@ -210,10 +208,8 @@
 - 每项 `line` 非空，且对每个 target 都含 `"@" + 该导师 mention`。
 - 除 `other` 外每项 `keywords` 非空。
 - `mention` 四条齐全、非空、互不相同，且**不以 `@` 开头**。
-- 每条 `expertise` 非空，元素全部属于四类枚举；chem/think/assistant 的 `expertise` 不得覆盖全部四类（否则永不转介，转介机制失效）。
-- 每条 `handoff_line` 非空且含 `{mention}` 占位，且不含 `@`（@ 由代码拼接时补上，避免双重 @）；`monitor` 无 `handoff_line`，其转介语即 `dispatch[*].line`。
 - `monitor` 的 prompt 必须包含调度规则关键字（`@化学老师`、`@思维老师`、`@助理`）。
-- **非 monitor 的三位 prompt 必须包含 @ 使用约束**（2026-08-03 重构，FR-M-06 AC2）：只有转介时才 @、回答正文绝不出现 @（可自动断言关键字「转介」与「绝不」）。
+- **非 monitor 的三位 prompt 必须包含"绝不出现 @"约束**（FR-M-06 AC2，可自动断言）。
 - 代码中不得出现任何 prompt 文本（grep 断言）。
 
 ---
@@ -261,7 +257,6 @@
 3. **平票取表中先出现者**（结果确定可复现，不用随机）。
 4. 零命中 → 返回兜底行的 `answer`（即班主任零命中话术）。
 5. 「（离线模式）」后缀由调用方追加，不写进 `answer`。
-6. **归属匹配**（2026-08-03 重构，`answer_for(mentor_id, question)`）：最佳命中行的 `mentor_id` 与提问导师一致 → 返回答案；不一致 → 返回空文本 + 归属导师 id，由 router 走转介（首接导师不硬答其他导师领域的兜底条目，FR-M-04 AC3 的离线落地）。零命中 → 返回兜底行话术与兜底行 mentor。
 
 校验规则：条目数 ≥20；无重复 id；`answer` 非空；恰好一行 `keywords` 为空（兜底行），其余行 `keywords` ≥1 项且无空字符串。
 

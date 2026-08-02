@@ -39,7 +39,7 @@
 
 **玩**：双击 `ElementAlchemy.exe`（导出包，无需安装 Godot）。
 
-**从源码运行**：用 Godot 4.6.3-stable 打开本目录，运行主场景 `scenes/main/main.tscn`。
+**从源码运行**：用 Godot 4.6.3-stable 打开 [`godot/`](godot/) 目录，运行主场景 `scenes/main/main.tscn`。
 
 **导师联网**：首次运行在存档目录生成 `config.cfg`，填入 DeepSeek API key 即走在线回答；未填或断网自动使用离线知识库（回答带「（离线模式）」标记）。key 只存本地，绝不进 git。
 
@@ -48,6 +48,7 @@
 ## 测试
 
 ```bash
+cd godot
 ./run_tests.sh        # GUT 全量测试（headless）
 ./validate_data.sh    # 数据表校验，全通过打印 DATA OK
 ```
@@ -58,21 +59,25 @@
 
 本项目将有**浏览器点开即玩的网页版**：
 
-- 独立 `web/` 平行工程，与 Godot 版**共用同一套 `data/` 内容源**（10 个 JSON 数据表单一事实来源）
+- 独立 `web/` 平行工程，与 Godot 版**共用同一套 `godot/data/` 内容源**（10 个 JSON 数据表单一事实来源）
 - 无需下载安装，打开 URL 即玩；首次加载后断网仍可走离线导师兜底
 - 功能边界与数值完全对齐本仓库 SPEC-01 / SPEC-02，不新增玩法
 - 方案与完整规格：[docs/SPEC-10-网页版移植方案.md](docs/SPEC-10-网页版移植方案.md)、[docs/SPEC-WEB-网页版完整规格.md](docs/SPEC-WEB-网页版完整规格.md)
 
 ## 目录结构
 
+本仓库为 monorepo：Godot 桌面版与网页版（规划中）共存，共用 `docs/` 规格与内容源。
+
 ```
-├── scenes/          # main / player / gameplay / mentor / ui 五大模块场景
-├── scripts/         # autoload（GameManager/RecipeDB/LLMClient…）+ 各模块逻辑
-├── data/            # 10 个 JSON 内容数据表（改文案不改代码）
-├── assets/          # art（图标/立绘/怪物/玩家）+ audio + fonts
-├── maps/            # TileMap 场景
-├── tests/           # GUT 单元测试 + 集成测试
-└── docs/            # 全部规格文档（事实来源，索引见 docs/SPEC.md）
+├── godot/           # Godot 4.6 桌面版工程（Windows exe）
+│   ├── scenes/      # main / player / gameplay / mentor / ui 五大模块场景
+│   ├── scripts/     # autoload（GameManager/RecipeDB/LLMClient…）+ 各模块逻辑
+│   ├── data/        # 10 个 JSON 内容数据表（改文案不改代码，网页版共用此内容源）
+│   ├── assets/      # art（图标/立绘/怪物/玩家）+ audio + fonts
+│   ├── maps/        # TileMap 场景
+│   └── tests/       # GUT 单元测试 + 集成测试
+├── web/             # 网页版（规划中，见下文）
+└── docs/            # 全部规格文档（两版共同的事实来源，索引见 docs/SPEC.md）
 ```
 
 ## 文档
@@ -83,7 +88,7 @@
 
 - 占位美术：程序生成，无第三方素材
 - 字体：缝合怪像素字体 Fusion Pixel Font（TakWolf，OFL-1.1）
-- 明细见 [assets/CREDITS.md](assets/CREDITS.md)
+- 明细见 [godot/assets/CREDITS.md](godot/assets/CREDITS.md)
 
 ## 许可
 
