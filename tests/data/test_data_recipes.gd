@@ -1,13 +1,13 @@
-# UT-D02 / FR-D-02：recipes.json 11 条、id 唯一、requires_pure_check 唯一、枚举合法、
+# UT-D02 / FR-D-02：recipes.json 12 条、id 唯一、requires_pure_check 唯一、枚举合法、
 # inputs/outputs 可解析、三元组无歧义、卡片四字段齐全。
 # 断言依据：SPEC-04 §3 校验规则 + SPEC-05 §2 内容表。
 extends GutTest
 
 const Fixture: GDScript = preload("res://tests/data/json_fixture.gd")
 
-const EXPECTED_COUNT: int = 11
+const EXPECTED_COUNT: int = 12
 const PURE_CHECK_RECIPE_ID: String = "r_hydrogen_burn"
-const PHYSICAL_RECIPE_ID: String = "r_salt_purify"
+const PHYSICAL_RECIPE_IDS: Array[String] = ["r_salt_purify", "r_carbon_activate"]
 const PHYSICAL_EQUATION: String = "（物理过程，无化学方程式）"
 const ID_PREFIX: String = "r_"
 const TOOLS: Array[String] = ["portable", "alcohol_lamp", "bench", "electrolyzer", "filter"]
@@ -19,11 +19,11 @@ const REQUIRED_FIELDS: Array[String] = [
 	"equation", "card_title", "card_body", "card_application",
 ]
 
-# SPEC-05 §2 的 11 条 recipe id，顺序即 R1..R11。
+# SPEC-05 §2 的 12 条 recipe id，顺序即 R1..R12。
 const SPEC_IDS: Array[String] = [
 	"r_sulfur_torch", "r_carbon_burn", "r_carbon_incomplete", "r_hydrogen_burn",
 	"r_electrolysis", "r_neutralize", "r_co2_lab", "r_co2_test",
-	"r_wet_copper", "r_extinguisher", "r_salt_purify",
+	"r_wet_copper", "r_extinguisher", "r_salt_purify", "r_carbon_activate",
 ]
 
 # SPEC-05 §2 表格：id -> [方程式, tool, condition]。
@@ -39,6 +39,7 @@ const SPEC_EQUATION_TOOL_CONDITION: Dictionary = {
 	"r_wet_copper": ["Fe + CuSO₄ = Cu + FeSO₄", "bench", "none"],
 	"r_extinguisher": ["NaHCO₃ + HCl = NaCl + H₂O + CO₂↑", "bench", "none"],
 	"r_salt_purify": [PHYSICAL_EQUATION, "bench", "three_step"],
+	"r_carbon_activate": [PHYSICAL_EQUATION, "alcohol_lamp", "heat"],
 }
 
 # SPEC-05 §2「卡片标题」一行。
@@ -54,6 +55,7 @@ const SPEC_CARD_TITLES: Dictionary = {
 	"r_wet_copper": "湿法炼铜",
 	"r_extinguisher": "灭火器原理",
 	"r_salt_purify": "粗盐提纯",
+	"r_carbon_activate": "活性炭的活化",
 }
 
 # SPEC-05 §2「现实应用（card_application）」列表。
@@ -69,6 +71,7 @@ const SPEC_CARD_APPLICATIONS: Dictionary = {
 	"r_wet_copper": "古代湿法炼铜——比火法更早的冶金智慧",
 	"r_extinguisher": "干粉灭火器就是这个原理",
 	"r_salt_purify": "海水晒盐后的粗盐提纯，食盐从这里来",
+	"r_carbon_activate": "防毒面具里的活性炭层，吸附毒气分子保护呼吸。",
 }
 
 var _rows: Array[Dictionary] = []
@@ -78,9 +81,9 @@ func before_each() -> void:
 	_rows = Fixture.rows_of("recipes.json")
 
 
-# AC1：恰好 11 条。
-func test_recipe_count_is_eleven() -> void:
-	assert_eq(_rows.size(), EXPECTED_COUNT, "recipes.json 必须恰好 11 条")
+# AC1：恰好 12 条。
+func test_recipe_count_is_twelve() -> void:
+	assert_eq(_rows.size(), EXPECTED_COUNT, "recipes.json 必须恰好 12 条")
 
 
 # AC1：id 唯一、r_ 前缀、集合与 SPEC-05 §2 一致。
@@ -118,18 +121,21 @@ func test_exactly_one_recipe_requires_pure_check() -> void:
 	assert_eq(flagged, [PURE_CHECK_RECIPE_ID] as Array[String], "只有 R4 可以 requires_pure_check=true")
 
 
-# R11 标记为物理过程，equation 用 SPEC-04 §3 规定的固定串。
+# R11/R12 标记为物理过程，equation 用 SPEC-04 §3 规定的固定串。
 func test_only_salt_purify_is_physical_with_placeholder_equation() -> void:
 	var physical: Array[String] = []
 	for row in _rows:
 		if row.get("is_physical", false) == true:
 			physical.append(str(row.get("id", "")))
-	assert_eq(physical, [PHYSICAL_RECIPE_ID] as Array[String], "只有 R11 可以 is_physical=true")
+	physical.sort()
+	var expected_physical: Array[String] = PHYSICAL_RECIPE_IDS.duplicate()
+	expected_physical.sort()
+	assert_eq(physical, expected_physical, "只有 R11/R12 可以 is_physical=true")
 	for row in _rows:
 		var id: String = str(row.get("id", ""))
 		var equation: String = str(row.get("equation", ""))
-		if id == PHYSICAL_RECIPE_ID:
-			assert_eq(equation, PHYSICAL_EQUATION, "R11 的 equation 必须是规定的物理过程串")
+		if PHYSICAL_RECIPE_IDS.has(id):
+			assert_eq(equation, PHYSICAL_EQUATION, "%s 的 equation 必须是规定的物理过程串" % id)
 		else:
 			assert_ne(equation, PHYSICAL_EQUATION, "%s 不是物理过程，不该用占位方程式" % id)
 

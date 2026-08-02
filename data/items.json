@@ -19,13 +19,22 @@
     "tip_id": "sys_spray"
   },
   {
+    "id": "activated_carbon",
+    "name": "活性炭",
+    "type": "consume",
+    "icon": "res://assets/art/icons/activated_carbon.png",
+    "effect": "kill_co",
+    "consumable": true,
+    "tip_id": "sys_carbon"
+  },
+  {
     "id": "carbon_mask",
     "name": "活性炭口罩",
     "type": "equip",
     "icon": "res://assets/art/icons/carbon_mask.png",
     "effect": "immune_co",
     "consumable": false,
-    "tip_id": "sys_mask"
+    "tip_id": "sys_carbon"
   },
   {
     "id": "extinguisher",
@@ -43,16 +52,6 @@
     "effect": "restore_oxygen",
     "effect_value_key": "items.oxygen_tank_restore",
     "consumable": true
-  },
-  {
-    "id": "glucose",
-    "name": "葡萄糖",
-    "type": "consume",
-    "icon": "res://assets/art/icons/glucose.png",
-    "effect": "restore_energy",
-    "effect_value_key": "items.glucose_restore",
-    "consumable": true,
-    "tip_id": "sys_energy_food"
   },
   {
     "id": "soap_water",

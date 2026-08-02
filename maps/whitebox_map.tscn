@@ -1,0 +1,147 @@
+[gd_scene load_steps=3 format=3]
+
+[sub_resource type="RectangleShape2D" id="ground_shape"]
+size = Vector2(4200, 40)
+
+[sub_resource type="RectangleShape2D" id="wall_shape"]
+size = Vector2(40, 400)
+
+[node name="WhiteboxMap" type="Node2D"]
+
+[node name="ZoneBackgrounds" type="Node2D" parent="."]
+
+[node name="SaltlakeBg" type="Polygon2D" parent="ZoneBackgrounds"]
+color = Color(0.55, 0.7, 0.85, 1)
+polygon = PackedVector2Array(-1700, -200, -700, -200, -700, 40, -1700, 40)
+
+[node name="GrasslandBg" type="Polygon2D" parent="ZoneBackgrounds"]
+color = Color(0.45, 0.7, 0.4, 1)
+polygon = PackedVector2Array(-700, -200, -150, -200, -150, 40, -700, 40)
+
+[node name="AcademyBg" type="Polygon2D" parent="ZoneBackgrounds"]
+color = Color(0.6, 0.5, 0.75, 1)
+polygon = PackedVector2Array(-150, -200, 600, -200, 600, 40, -150, 40)
+
+[node name="CampBg" type="Polygon2D" parent="ZoneBackgrounds"]
+color = Color(0.7, 0.55, 0.35, 1)
+polygon = PackedVector2Array(600, -200, 1350, -200, 1350, 40, 600, 40)
+
+[node name="MineBg" type="Polygon2D" parent="ZoneBackgrounds"]
+color = Color(0.3, 0.28, 0.32, 1)
+polygon = PackedVector2Array(1400, -200, 2400, -200, 2400, 40, 1400, 40)
+
+[node name="River" type="Polygon2D" parent="."]
+color = Color(0.35, 0.6, 0.9, 1)
+polygon = PackedVector2Array(700, -14, 800, -14, 800, 40, 700, 40)
+
+[node name="Ground" type="StaticBody2D" parent="."]
+
+[node name="Shape" type="CollisionShape2D" parent="Ground"]
+position = Vector2(350, 20)
+shape = SubResource("ground_shape")
+
+[node name="LeftWall" type="CollisionShape2D" parent="Ground"]
+position = Vector2(-1700, -160)
+shape = SubResource("wall_shape")
+
+[node name="RightWall" type="CollisionShape2D" parent="Ground"]
+position = Vector2(2400, -160)
+shape = SubResource("wall_shape")
+
+[node name="GroundVisual" type="Polygon2D" parent="."]
+color = Color(0.4, 0.32, 0.25, 1)
+polygon = PackedVector2Array(-1700, 0, 2400, 0, 2400, 40, -1700, 40)
+
+[node name="CollectableSpawns" type="Node2D" parent="."]
+
+[node name="SpawnO2a" type="Marker2D" parent="CollectableSpawns"]
+position = Vector2(-620, -20)
+metadata/substance_id = "o2"
+
+[node name="SpawnO2b" type="Marker2D" parent="CollectableSpawns"]
+position = Vector2(-480, -20)
+metadata/substance_id = "o2"
+
+[node name="SpawnO2c" type="Marker2D" parent="CollectableSpawns"]
+position = Vector2(-300, -20)
+metadata/substance_id = "o2"
+
+[node name="SpawnCa" type="Marker2D" parent="CollectableSpawns"]
+position = Vector2(-560, -20)
+metadata/substance_id = "c"
+
+[node name="SpawnCb" type="Marker2D" parent="CollectableSpawns"]
+position = Vector2(-380, -20)
+metadata/substance_id = "c"
+
+[node name="SpawnStickA" type="Marker2D" parent="CollectableSpawns"]
+position = Vector2(-520, -20)
+metadata/substance_id = "stick"
+
+[node name="SpawnStickB" type="Marker2D" parent="CollectableSpawns"]
+position = Vector2(-240, -20)
+metadata/substance_id = "stick"
+
+[node name="SpawnWaterA" type="Marker2D" parent="CollectableSpawns"]
+position = Vector2(730, -20)
+metadata/substance_id = "h2o"
+
+[node name="SpawnWaterB" type="Marker2D" parent="CollectableSpawns"]
+position = Vector2(790, -20)
+metadata/substance_id = "h2o"
+
+[node name="SpawnSoap" type="Marker2D" parent="CollectableSpawns"]
+position = Vector2(1000, -20)
+metadata/substance_id = "soap_water"
+
+[node name="SpawnHcl" type="Marker2D" parent="CollectableSpawns"]
+position = Vector2(1080, -20)
+metadata/substance_id = "hcl"
+
+[node name="SpawnNaoh" type="Marker2D" parent="CollectableSpawns"]
+position = Vector2(1120, -20)
+metadata/substance_id = "naoh"
+
+[node name="SpawnCaoh2" type="Marker2D" parent="CollectableSpawns"]
+position = Vector2(900, -20)
+metadata/substance_id = "caoh2"
+
+[node name="SpawnCarbonMask" type="Marker2D" parent="CollectableSpawns"]
+position = Vector2(1160, -20)
+metadata/substance_id = "carbon_mask"
+
+[node name="SpawnSaltA" type="Marker2D" parent="CollectableSpawns"]
+position = Vector2(-1500, -20)
+metadata/substance_id = "crude_salt"
+
+[node name="SpawnSaltB" type="Marker2D" parent="CollectableSpawns"]
+position = Vector2(-1200, -20)
+metadata/substance_id = "crude_salt"
+
+[node name="SpawnSaltC" type="Marker2D" parent="CollectableSpawns"]
+position = Vector2(-900, -20)
+metadata/substance_id = "crude_salt"
+
+[node name="SpawnSa" type="Marker2D" parent="CollectableSpawns"]
+position = Vector2(1500, -20)
+metadata/substance_id = "s"
+
+[node name="SpawnSb" type="Marker2D" parent="CollectableSpawns"]
+position = Vector2(1900, -20)
+metadata/substance_id = "s"
+
+[node name="SpawnCaco3" type="Marker2D" parent="CollectableSpawns"]
+position = Vector2(1650, -20)
+metadata/substance_id = "caco3"
+
+[node name="SpawnCuso4" type="Marker2D" parent="CollectableSpawns"]
+position = Vector2(1800, -20)
+metadata/substance_id = "cuso4"
+
+[node name="SpawnFe2o3" type="Marker2D" parent="CollectableSpawns"]
+position = Vector2(2100, -20)
+metadata/substance_id = "fe2o3"
+
+[node name="SpawnFe" type="Marker2D" parent="CollectableSpawns"]
+position = Vector2(2250, -20)
+metadata/substance_id = "fe"

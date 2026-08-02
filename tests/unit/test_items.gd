@@ -1,20 +1,20 @@
-# UT-G12 / FR-G-12：八种道具按数据表生效。
+# UT-G12 / FR-G-12：道具按数据表生效。
 # AC1 效果值全部读自 balance（改数值不改代码）；AC2 装备型不消耗、消耗型 -1；
-# AC3 氧气瓶 +50 氧气、葡萄糖 +20 能量、硫火把提供照明半径（读 daynight.torch_view_radius）。
+# AC3 氧气瓶 +50 氧气、活性炭砸 CO 幽灵（kill_co）、硫火把提供照明半径（读 daynight.torch_view_radius）。
 # 用 load() 按路径取脚本而不是 class_name：实现缺失时是断言失败而非编译错误（SPEC-06 §2）。
 extends GutTest
 
 const ITEM_EFFECTS_PATH: String = "res://scripts/gameplay/item_effects.gd"
 const INVENTORY_PATH: String = "res://scripts/gameplay/inventory.gd"
 
-# SPEC-05 §8 的八种道具与其类型（effect 枚举见 SPEC-04 §10）。
+# SPEC-02 §5 的道具与其类型（effect 枚举见 SPEC-04 §10）。
 const EXPECTED_ITEMS: Dictionary = {
 	"sulfur_torch": {"type": "equip", "effect": "light"},
 	"neutral_spray": {"type": "consume", "effect": "kill_acid"},
+	"activated_carbon": {"type": "consume", "effect": "kill_co"},
 	"carbon_mask": {"type": "equip", "effect": "immune_co"},
 	"extinguisher": {"type": "consume", "effect": "extinguish"},
 	"oxygen_tank": {"type": "consume", "effect": "restore_oxygen"},
-	"glucose": {"type": "consume", "effect": "restore_energy"},
 	"soap_water": {"type": "consume", "effect": "test_hardwater"},
 	"stick": {"type": "material", "effect": "none"},
 }
@@ -27,6 +27,16 @@ class FakeSprayTarget:
 	var hit_count: int = 0
 
 	func hit_by_spray() -> void:
+		hit_count += 1
+
+
+# 假 CO 幽灵目标：只实现 hit_by_carbon()（活性炭对策，FR-G-10 AC3）。
+class FakeCarbonTarget:
+	extends Node
+
+	var hit_count: int = 0
+
+	func hit_by_carbon() -> void:
 		hit_count += 1
 
 
@@ -81,7 +91,6 @@ func test_effect_values_come_from_balance_table() -> void:
 		return
 	var cases: Dictionary = {
 		"oxygen_tank": 50.0,
-		"glucose": 20.0,
 		"sulfur_torch": 220.0,
 	}
 	for item_id: String in cases:
@@ -97,30 +106,51 @@ func test_effect_values_come_from_balance_table() -> void:
 			"%s 的效果值应与 SPEC-02 §5 一致" % item_id)
 
 
-# AC2：装备型道具使用不消耗数量，进入已装备集合（持续生效）。
-func test_equipment_is_not_consumed() -> void:
+# FR-G-10 AC5 联动：活性炭口罩为装备型（effect=immune_co，SPEC-05 §8），
+# 装备不消耗、进已装备集合（幽灵侧按 equipped_ids 判定免疫），并触发 sys_carbon 字幕。
+func test_carbon_mask_is_equipment_and_shows_tip() -> void:
 	if fx == null:
 		return
+	var def: Dictionary = fx.get_item("carbon_mask")
+	assert_false(def.is_empty(), "items.json 应包含 carbon_mask（SPEC-05 §8 / D4）")
+	if def.is_empty():
+		return
+	assert_eq(str(def.get("tip_id", "")), "sys_carbon", "口罩字幕应复用 sys_carbon（SPEC-05 §8）")
+	assert_true(fx.is_equipment("carbon_mask"), "口罩应为装备型")
+	assert_false(fx.is_consumable("carbon_mask"), "口罩不应为消耗型")
 	inv.add_item("carbon_mask", 1)
 	var result: Dictionary = fx.use_item("carbon_mask", inv)
 	assert_true(bool(result.get("success", false)), "口罩装备应成功")
 	assert_false(bool(result.get("consumed", true)), "装备型不应消耗")
 	assert_eq(inv.count_of("carbon_mask"), 1, "装备后数量应保持 1")
 	assert_true(fx.is_equipped("carbon_mask"), "装备后应在已装备集合中")
-	assert_true(fx.is_equipment("carbon_mask"), "口罩应识别为装备型")
-	assert_false(fx.is_consumable("carbon_mask"), "口罩不应识别为消耗型")
+	assert_true(tip.is_shown("sys_carbon"), "口罩使用应触发 sys_carbon 字幕")
+
+
+# AC2：装备型道具使用不消耗数量，进入已装备集合（持续生效）。
+func test_equipment_is_not_consumed() -> void:
+	if fx == null:
+		return
+	inv.add_item("sulfur_torch", 1)
+	var result: Dictionary = fx.use_item("sulfur_torch", inv)
+	assert_true(bool(result.get("success", false)), "硫火把装备应成功")
+	assert_false(bool(result.get("consumed", true)), "装备型不应消耗")
+	assert_eq(inv.count_of("sulfur_torch"), 1, "装备后数量应保持 1")
+	assert_true(fx.is_equipped("sulfur_torch"), "装备后应在已装备集合中")
+	assert_true(fx.is_equipment("sulfur_torch"), "硫火把应识别为装备型")
+	assert_false(fx.is_consumable("sulfur_torch"), "硫火把不应识别为消耗型")
 
 
 # AC2：重复装备不叠加、不出错。
 func test_equip_twice_does_not_duplicate() -> void:
 	if fx == null:
 		return
-	assert_true(fx.equip("carbon_mask"), "首次装备应成功")
-	assert_true(fx.equip("carbon_mask"), "重复装备应幂等成功")
+	assert_true(fx.equip("sulfur_torch"), "首次装备应成功")
+	assert_true(fx.equip("sulfur_torch"), "重复装备应幂等成功")
 	var equipped: Array = fx.equipped_ids()
 	var count: int = 0
 	for item_id: String in equipped:
-		if item_id == "carbon_mask":
+		if item_id == "sulfur_torch":
 			count += 1
 	assert_eq(count, 1, "已装备集合不应出现重复")
 
@@ -182,16 +212,28 @@ func test_oxygen_tank_restores_50_oxygen() -> void:
 	assert_eq(inv.count_of("oxygen_tank"), 0, "氧气瓶应消耗")
 
 
-# AC3：葡萄糖 +20 能量。
-func test_glucose_restores_20_energy() -> void:
+# AC3：活性炭砸 CO 幽灵——命中目标即消耗并结算 kill_co（FR-G-10 AC3）。
+func test_activated_carbon_kills_co_ghost() -> void:
 	if fx == null:
 		return
-	gm.modify_energy(-50.0)
-	assert_almost_eq(gm.energy, 50.0, 0.001, "前提：能量降到 50")
-	inv.add_item("glucose", 1)
-	var result: Dictionary = fx.use_item("glucose", inv)
-	assert_true(bool(result.get("success", false)), "葡萄糖使用应成功")
-	assert_almost_eq(gm.energy, 70.0, 0.001, "能量应 +20")
+	var target: FakeCarbonTarget = add_child_autofree(FakeCarbonTarget.new())
+	inv.add_item("activated_carbon", 2)
+	var result: Dictionary = fx.use_item("activated_carbon", inv, target)
+	assert_true(bool(result.get("success", false)), "活性炭应对 CO 幽灵使用成功")
+	assert_eq(target.hit_count, 1, "幽灵应被砸中一次")
+	assert_eq(inv.count_of("activated_carbon"), 1, "消耗型用后 -1")
+	assert_true(tip.is_shown("sys_carbon"), "应触发 sys_carbon 字幕")
+
+
+# AC3 边界：活性炭对空气（无目标）不许浪费。
+func test_activated_carbon_requires_target() -> void:
+	if fx == null:
+		return
+	inv.add_item("activated_carbon", 1)
+	var result: Dictionary = fx.use_item("activated_carbon", inv, null)
+	assert_false(bool(result.get("success", true)), "无目标不应使用成功")
+	assert_eq(str(result.get("reason", "")), "no_target", "失败原因应为 no_target")
+	assert_eq(inv.count_of("activated_carbon"), 1, "无目标不消耗")
 
 
 # AC3：硫火把提供照明——效果值就是 balance 的 torch_view_radius（FR-P-03 的道具侧）。
@@ -209,13 +251,14 @@ func test_sulfur_torch_provides_light_radius() -> void:
 	assert_eq(inv.count_of("sulfur_torch"), 1, "装备型不应消耗")
 
 
-# 使用带 tip_id 的道具要走字幕引擎（sys_energy_food 等知识字幕）。
+# 使用带 tip_id 的道具要走字幕引擎（sys_spray 等知识字幕）。
 func test_use_shows_tip_from_data_table() -> void:
 	if fx == null:
 		return
-	inv.add_item("glucose", 1)
-	fx.use_item("glucose", inv)
-	assert_true(tip.is_shown("sys_energy_food"), "葡萄糖使用应触发 items.json 里配置的字幕")
+	var target: FakeSprayTarget = add_child_autofree(FakeSprayTarget.new())
+	inv.add_item("neutral_spray", 1)
+	fx.use_item("neutral_spray", inv, target)
+	assert_true(tip.is_shown("sys_spray"), "喷雾使用应触发 items.json 里配置的字幕")
 
 
 # 防御性输入：未知 id、材料型道具使用失败且不崩溃。

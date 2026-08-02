@@ -1,6 +1,15 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scenes/main/hud.gd" id="1"]
+
+[sub_resource type="StyleBoxFlat" id="fill_oxygen"]
+bg_color = Color(0.435294, 0.839216, 0.909804, 1)
+
+[sub_resource type="StyleBoxFlat" id="fill_energy"]
+bg_color = Color(1, 0.85098, 0.290196, 1)
+
+[sub_resource type="StyleBoxFlat" id="fill_health"]
+bg_color = Color(0.886275, 0.329412, 0.168627, 1)
 
 [node name="HUD" type="Control"]
 anchors_preset = 15
@@ -16,6 +25,7 @@ offset_top = 8.0
 offset_right = 128.0
 offset_bottom = 24.0
 mouse_filter = 2
+theme_override_styles/fill = SubResource("fill_oxygen")
 max_value = 100.0
 value = 100.0
 show_percentage = false
@@ -27,6 +37,7 @@ offset_top = 28.0
 offset_right = 128.0
 offset_bottom = 44.0
 mouse_filter = 2
+theme_override_styles/fill = SubResource("fill_energy")
 max_value = 100.0
 value = 100.0
 show_percentage = false
@@ -38,6 +49,7 @@ offset_top = 48.0
 offset_right = 128.0
 offset_bottom = 64.0
 mouse_filter = 2
+theme_override_styles/fill = SubResource("fill_health")
 max_value = 100.0
 value = 100.0
 show_percentage = false

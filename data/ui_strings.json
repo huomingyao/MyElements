@@ -22,5 +22,12 @@
   "pause_to_menu": "回主菜单",
   "menu_map": "世界地图",
   "chat_send": "发送",
-  "chat_close": "关闭"
+  "chat_close": "关闭",
+  "craft_title": "合成台",
+  "craft_tool_portable": "便携格",
+  "craft_tool_lamp": "酒精灯",
+  "craft_tool_bench": "实验台",
+  "craft_cancel": "取消",
+  "craft_slot_empty": "（空）",
+  "inventory_title": "背包"
 }

@@ -58,7 +58,7 @@
 
 ---
 
-## 3. recipes.json（11 条 → FR-D-02）
+## 3. recipes.json（12 条 → FR-D-02）
 
 ```json
 [
@@ -92,10 +92,10 @@
 | `card_application` | String | ✅ | 现实应用一句话 |
 | `unlock_tip` | String | ⬜ | 存在于 tips 表 |
 | `requires_pure_check` | bool | ⬜ | 仅 R4 为 true |
-| `is_physical` | bool | ⬜ | R11 粗盐提纯为 true（卡片提示"物理变化"） |
+| `is_physical` | bool | ⬜ | 物理过程配方为 true（R11 粗盐提纯、R12 碳活化，卡片提示"物理变化"） |
 
 校验规则：
-- 恰好 11 条；id 唯一。
+- 恰好 12 条；id 唯一。
 - 有且仅有一条 `requires_pure_check == true`（R4）。
 - `tool`/`condition` 在枚举内。
 - `inputs`/`outputs` 中所有 id 可解析（substances 或道具表）。
@@ -382,7 +382,7 @@
 | `name` | String | ✅ | 中文名 |
 | `type` | String | ✅ | 枚举：`equip/consume/material` |
 | `icon` | String | ✅ | 路径存在或占位 |
-| `effect` | String | ✅ | 枚举：`light/immune_co/kill_acid/extinguish/restore_oxygen/restore_energy/test_hardwater/none` |
+| `effect` | String | ✅ | 枚举：`light/kill_co/kill_acid/immune_co/extinguish/restore_oxygen/restore_energy/test_hardwater/none`（2026-08-02：增 `immune_co` 活性炭口罩；`restore_energy` 随葡萄糖移出 MVP，枚举位保留赛后启用） |
 | `effect_value_key` | String | ⬜ | 指向 `balance.json` 的点分键，效果数值从那里读（FR-G-12 AC1） |
 | `consumable` | bool | ✅ | 使用后是否 -1 |
 | `tip_id` | String | ⬜ | 使用时字幕 |
@@ -431,7 +431,7 @@
 | 4 | 枚举值合法 | 表名 + id + 字段 + 实际值 + 允许值 |
 | 5 | 交叉引用存在（tip_id / inputs / outputs / effect_value_key） | 来源表 + id + 目标表 + 缺失 id |
 | 6 | 资源路径存在 | 表名 + id + 路径 |
-| 7 | 条数约束（substances 17 且计数集合 16 / recipes 11 / mentors 4 / worldmap 13 且 5 解锁 / qa ≥20） | 表名 + 期望 + 实际 |
+| 7 | 条数约束（substances 17 且计数集合 16 / recipes 12 / mentors 4 / worldmap 13 且 5 解锁 / qa ≥20） | 表名 + 期望 + 实际 |
 | 8 | 配方三元组无歧义 | 冲突的两个 recipe id |
 | 9 | monitor prompt 含调度关键字；其余三位含"绝不出现 @"；`mention` 四条唯一非空；`monitor.dispatch` 四类齐全有序、`targets` 合法、`line` 含各 target 的 `@mention` | 导师 id + 字段名 |
 | 10 | `ui_strings.json` 覆盖 [SPEC-05 §9](SPEC-05-内容数据表.md) 全部 key，占位符仅 `{n}` | 缺失/非法的 key |

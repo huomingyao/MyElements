@@ -19,6 +19,11 @@ const FALLBACK_OUTPUT_COUNT: int = 1
 # 没有纯净水时提示先过滤（sys_filter：净水四步）。
 const TIP_NEED_CLEAN_WATER: String = "sys_filter"
 
+# D4 裁决（2026-08-02）：电解成功额外灌装 1 个氧气瓶（"氧气可以制备"，SPEC-02 §5 道具表）。
+# 与 OUTPUT_COUNTS 同理锚定常量区（白名单不含 balance.json）；赛后若进数据表，改表即改行为。
+const BONUS_ITEM_ID: String = "oxygen_tank"
+const BONUS_ITEM_COUNT: int = 1
+
 # ==== 逻辑区 ====
 
 func interact(player: Node) -> void:
@@ -39,6 +44,8 @@ func interact(player: Node) -> void:
 	for output_id: Variant in (result.get("outputs", []) as Array):
 		var id: String = str(output_id)
 		inventory.add_item(id, int(OUTPUT_COUNTS.get(id, FALLBACK_OUTPUT_COUNT)))
+	# D4：电解成功额外灌装氧气瓶（氧气可制备的具象化，SPEC-02 §5 来源列）。
+	inventory.add_item(BONUS_ITEM_ID, BONUS_ITEM_COUNT)
 	_show_tip(_unlock_tip_id(db))
 
 

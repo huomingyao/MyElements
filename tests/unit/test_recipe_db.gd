@@ -53,7 +53,7 @@ func _reversed_inputs(recipe: Dictionary) -> Array:
 # AC5 + SPEC-06 §4.2：11 条配方逐条正例。倒序传材料，顺带覆盖规则 1（顺序无关）。
 func test_all_eleven_recipes_craft_successfully() -> void:
 	var recipes: Array = db.all_recipes()
-	assert_eq(recipes.size(), 11, "recipes.json 应有 11 条配方")
+	assert_eq(recipes.size(), 12, "recipes.json 应有 12 条配方")
 	# R4 需要验纯才能成功，先解锁，让本测试专注「逐条能合成」。
 	gm.set_flag("purity_check_unlocked", true)
 	for recipe: Dictionary in recipes:

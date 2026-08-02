@@ -1,10 +1,10 @@
 # UT-D03 / FR-D-03：tips.json id 唯一、style 枚举、文案非空、SPEC-05 §3 列出的每个 id 都存在。
-# 断言依据：SPEC-04 §4 校验规则 + SPEC-05 §3 内容表（47 条）。
+# 断言依据：SPEC-04 §4 校验规则 + SPEC-05 §3 内容表（51 条）。
 extends GutTest
 
 const Fixture: GDScript = preload("res://tests/data/json_fixture.gd")
 
-const EXPECTED_COUNT: int = 47
+const EXPECTED_COUNT: int = 51
 const STYLES: Array[String] = ["bubble", "banner", "warning"]
 const STYLE_DURATIONS: Dictionary = {"bubble": 3.0, "banner": 4.0, "warning": 5.0}
 
@@ -22,6 +22,7 @@ const SPEC_ZONE_TIPS: Dictionary = {
 # SPEC-05 §3.2 机制提示（style: banner）
 const SPEC_SYS_TIPS: Dictionary = {
 	"sys_oxygen_low": "氧气不足！回到开阔地带，或制取氧气",
+	"sys_oxygen_tutorial": "氧气在消耗——回到开阔地带，或制取氧气",
 	"sys_mine_breath": "氧气不足时呼吸加快——这就是矿洞要通风的原因",
 	"sys_energy_food": "六大营养素：糖类、蛋白质、油脂、维生素、无机盐、水",
 	"sys_torch_off_water": "水下点不着火把——燃烧需要氧气（燃烧三条件之一）",
@@ -30,12 +31,15 @@ const SPEC_SYS_TIPS: Dictionary = {
 	"sys_filter": "净水四步：沉淀 → 过滤 → 吸附 → 蒸馏",
 	"sys_electrolysis": "电解水：正氧负氢，体积比 1:2",
 	"sys_purity_ok": "\"噗\"的一声轻响——氢气纯净，可以安全点燃了",
-	"sys_mask": "活性炭口罩：活性炭的吸附性——防毒面具的原理",
+	"sys_carbon": "活性炭疏松多孔，把 CO 牢牢吸附——吸附是物理变化",
 	"sys_spray": "中和喷雾：酸+碱→盐+水——酸碱中和反应",
 	"sys_sleep": "睡一觉，生命回满——新的一天，矿脉也刷新了",
 	"sys_hardwater": "硬水遇肥皂水不起沫——用肥皂水可以区分硬水和软水",
 	"sys_purify": "粗盐提纯三步：溶解 → 过滤 → 蒸发，泥沙留在滤纸上",
 	"sys_craft_hint": "把材料放进来，试试化学反应",
+	"sys_trade_prompt": "原住民：把不用的装备卖给我吧——按数字键选一件",
+	"sys_trade_done": "原住民收下了装备，塞给你一份干粮——能量 +20",
+	"sys_trade_empty": "原住民摆摆手：这件我不要——他只收人造的装备",
 	"tip_mass_conservation": "反应前后原子种类和数目不变——质量守恒定律",
 }
 
@@ -86,9 +90,17 @@ func before_each() -> void:
 		_by_id[str(row.get("id", ""))] = row
 
 
-# SPEC-05 §3 结语：7+16+6+1+17 = 47 条。
-func test_tip_count_is_forty_seven() -> void:
-	assert_eq(_rows.size(), EXPECTED_COUNT, "tips.json 必须恰好 47 条（SPEC-05 §3 合计）")
+# SPEC-05 §3 结语：7（区域）+ 20（机制，含 sys_oxygen_tutorial）+ 6（警示）+ 1（卡片底行）+ 17（物质）= 51 条。
+func test_tip_count_is_fifty_one() -> void:
+	assert_eq(_rows.size(), EXPECTED_COUNT, "tips.json 必须恰好 51 条（SPEC-05 §3 合计）")
+
+
+# SPEC-05 §3.2 补记：sys_oxygen_tutorial 为 once 横幅（FR-U-02 AC2，氧气 70 首次教程）。
+func test_sys_oxygen_tutorial_is_once_banner() -> void:
+	assert_true(_by_id.has("sys_oxygen_tutorial"), "SPEC-05 §3.2 的字幕缺失：sys_oxygen_tutorial")
+	var row: Dictionary = _by_id.get("sys_oxygen_tutorial", {})
+	assert_eq(str(row.get("style", "")), "banner", "sys_oxygen_tutorial 的 style 应为 banner")
+	assert_eq(row.get("once", false), true, "sys_oxygen_tutorial 的 once 应为 true")
 
 
 # AC1：id 唯一。

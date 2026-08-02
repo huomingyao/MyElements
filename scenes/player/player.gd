@@ -26,6 +26,12 @@ const DARK_ZONE: String = "mine"
 # ViewLight 贴图基准半径：纹理到位后 texture_scale = view_radius / 基准值。
 const LIGHT_TEXTURE_BASE_RADIUS: float = 64.0
 
+# ViewLight 兜底纹理（FR-P-03 AC2，P4 交付前的程序化占位）：径向渐变，白芯透明边。
+# 纹理边长 = 基准直径；渐变两端只用 alpha（颜色保持白，发光强度由引擎混合决定）。
+const LIGHT_FALLBACK_TEXTURE_SIZE: int = 128
+const LIGHT_FALLBACK_CENTER_ALPHA: float = 1.0
+const LIGHT_FALLBACK_EDGE_ALPHA: float = 0.0
+
 # ==== 逻辑区 ====
 
 # 移动参数（_ready 时从 balance.json 读入；reload_config 可重读，调参与测试用）。
@@ -44,6 +50,9 @@ var inventory: RefCounted = null
 # 道具效果实例挂载点（TP-09 ItemEffects，RefCounted）：同样由世界场景注入。
 var item_effects: RefCounted = null
 
+# 模态面板打开时由世界（ui_manager 裁决）置位：屏蔽移动与交互，重力照常（SPEC-03 §8）。
+var input_blocked: bool = false
+
 var _torch_equipped: bool = false
 var _current_target: Node = null
 
@@ -58,6 +67,24 @@ func _ready() -> void:
 	reload_config()
 	_prompt.visible = false
 	_light.enabled = false
+	_ensure_light_fallback_texture()
+
+
+# P4 纹理未交付时程序生成径向渐变占位（白芯透明边）；已有纹理则不覆盖。
+func _ensure_light_fallback_texture() -> void:
+	if _light.texture != null:
+		return
+	var gradient: Gradient = Gradient.new()
+	gradient.set_color(0, Color(1.0, 1.0, 1.0, LIGHT_FALLBACK_CENTER_ALPHA))
+	gradient.set_color(1, Color(1.0, 1.0, 1.0, LIGHT_FALLBACK_EDGE_ALPHA))
+	var texture: GradientTexture2D = GradientTexture2D.new()
+	texture.gradient = gradient
+	texture.fill = GradientTexture2D.FILL_RADIAL
+	texture.fill_from = Vector2(0.5, 0.5)
+	texture.fill_to = Vector2(1.0, 0.5)
+	texture.width = LIGHT_FALLBACK_TEXTURE_SIZE
+	texture.height = LIGHT_FALLBACK_TEXTURE_SIZE
+	_light.texture = texture
 
 
 # 从 balance.json 重读玩家参数（铁律 4：改表即改行为）。
@@ -86,6 +113,9 @@ func _apply_gravity(delta: float) -> void:
 
 
 func _apply_movement() -> void:
+	if input_blocked:
+		velocity.x = 0.0
+		return
 	var direction: float = Input.get_axis("move_left", "move_right")
 	var speed: float = move_speed * _speed_multiplier()
 	velocity.x = direction * speed
@@ -117,6 +147,8 @@ func _update_interaction() -> void:
 
 
 func _try_interact() -> void:
+	if input_blocked:
+		return
 	if _current_target == null:
 		return
 	if not bool(_current_target.can_interact()):

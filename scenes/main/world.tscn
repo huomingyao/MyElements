@@ -1,0 +1,175 @@
+[gd_scene load_steps=31 format=3]
+
+[ext_resource type="Script" path="res://scenes/main/world.gd" id="1_world"]
+[ext_resource type="Script" path="res://scenes/main/zone_trigger.gd" id="2_zone"]
+[ext_resource type="Script" path="res://scenes/gameplay/monster_spawner.gd" id="3_spawner"]
+[ext_resource type="Script" path="res://scenes/main/ui_manager.gd" id="4_uimgr"]
+[ext_resource type="PackedScene" path="res://maps/whitebox_map.tscn" id="10_map"]
+[ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="11_player"]
+[ext_resource type="PackedScene" path="res://scenes/gameplay/monster_co_ghost.tscn" id="12_ghost"]
+[ext_resource type="PackedScene" path="res://scenes/gameplay/facility_lake_water.tscn" id="13_lake"]
+[ext_resource type="PackedScene" path="res://scenes/gameplay/facility_filter.tscn" id="14_filter"]
+[ext_resource type="PackedScene" path="res://scenes/gameplay/facility_electrolyzer.tscn" id="15_elec"]
+[ext_resource type="PackedScene" path="res://scenes/gameplay/facility_bench.tscn" id="16_bench"]
+[ext_resource type="PackedScene" path="res://scenes/gameplay/facility_campfire.tscn" id="17_fire"]
+[ext_resource type="PackedScene" path="res://scenes/gameplay/facility_bed.tscn" id="18_bed"]
+[ext_resource type="PackedScene" path="res://scenes/gameplay/native_trader.tscn" id="30_trader"]
+[ext_resource type="PackedScene" path="res://scenes/mentor/academy.tscn" id="19_academy"]
+[ext_resource type="PackedScene" path="res://scenes/gameplay/explosion.tscn" id="20_boom"]
+[ext_resource type="PackedScene" path="res://scenes/main/hud.tscn" id="21_hud"]
+[ext_resource type="PackedScene" path="res://scenes/ui/tip_layer.tscn" id="22_tip"]
+[ext_resource type="PackedScene" path="res://scenes/ui/craft_panel.tscn" id="23_craft"]
+[ext_resource type="PackedScene" path="res://scenes/ui/card_popup.tscn" id="24_card"]
+[ext_resource type="PackedScene" path="res://scenes/ui/inventory_panel.tscn" id="25_inv"]
+[ext_resource type="PackedScene" path="res://scenes/main/world_map_panel.tscn" id="26_map"]
+[ext_resource type="PackedScene" path="res://scenes/ui/codex_panel.tscn" id="27_codex"]
+[ext_resource type="PackedScene" path="res://scenes/ui/death_screen.tscn" id="28_death"]
+[ext_resource type="PackedScene" path="res://scenes/main/pause_menu.tscn" id="29_pause"]
+[ext_resource type="PackedScene" path="res://scenes/main/facility_signpost.tscn" id="31_signpost"]
+
+[sub_resource type="RectangleShape2D" id="zone_saltlake"]
+size = Vector2(1000, 120)
+
+[sub_resource type="RectangleShape2D" id="zone_grassland"]
+size = Vector2(550, 120)
+
+[sub_resource type="RectangleShape2D" id="zone_camp"]
+size = Vector2(750, 120)
+
+[sub_resource type="RectangleShape2D" id="zone_mine"]
+size = Vector2(1000, 120)
+
+[sub_resource type="RectangleShape2D" id="zone_river"]
+size = Vector2(120, 120)
+
+[node name="World" type="Node2D"]
+script = ExtResource("1_world")
+
+[node name="Map" parent="." instance=ExtResource("10_map")]
+
+[node name="Player" parent="." instance=ExtResource("11_player")]
+position = Vector2(-400, -20)
+
+[node name="ZoneTriggers" type="Node2D" parent="."]
+
+[node name="SaltlakeTrigger" type="Area2D" parent="ZoneTriggers"]
+position = Vector2(-1200, -20)
+script = ExtResource("2_zone")
+zone_id = "saltlake"
+
+[node name="Shape" type="CollisionShape2D" parent="ZoneTriggers/SaltlakeTrigger"]
+shape = SubResource("zone_saltlake")
+
+[node name="GrasslandTrigger" type="Area2D" parent="ZoneTriggers"]
+position = Vector2(-425, -20)
+script = ExtResource("2_zone")
+zone_id = "grassland"
+
+[node name="Shape" type="CollisionShape2D" parent="ZoneTriggers/GrasslandTrigger"]
+shape = SubResource("zone_grassland")
+
+[node name="CampTrigger" type="Area2D" parent="ZoneTriggers"]
+position = Vector2(975, -20)
+script = ExtResource("2_zone")
+zone_id = "camp"
+
+[node name="Shape" type="CollisionShape2D" parent="ZoneTriggers/CampTrigger"]
+shape = SubResource("zone_camp")
+
+[node name="MineTrigger" type="Area2D" parent="ZoneTriggers"]
+position = Vector2(1900, -20)
+script = ExtResource("2_zone")
+zone_id = "mine"
+
+[node name="Shape" type="CollisionShape2D" parent="ZoneTriggers/MineTrigger"]
+shape = SubResource("zone_mine")
+
+[node name="RiverTrigger" type="Area2D" parent="ZoneTriggers"]
+position = Vector2(750, -20)
+script = ExtResource("2_zone")
+tip_id = "zone_river"
+
+[node name="Shape" type="CollisionShape2D" parent="ZoneTriggers/RiverTrigger"]
+shape = SubResource("zone_river")
+
+[node name="Collectables" type="Node2D" parent="."]
+
+[node name="Facilities" type="Node2D" parent="."]
+
+[node name="FacilityLakeWater" parent="Facilities" instance=ExtResource("13_lake")]
+position = Vector2(750, -16)
+
+[node name="FacilityFilter" parent="Facilities" instance=ExtResource("14_filter")]
+position = Vector2(880, -16)
+
+[node name="FacilityElectrolyzer" parent="Facilities" instance=ExtResource("15_elec")]
+position = Vector2(960, -16)
+
+[node name="FacilityBench" parent="Facilities" instance=ExtResource("16_bench")]
+position = Vector2(1050, -16)
+
+[node name="FacilityCampfire" parent="Facilities" instance=ExtResource("17_fire")]
+position = Vector2(1150, -16)
+
+[node name="FacilityBed" parent="Facilities" instance=ExtResource("18_bed")]
+position = Vector2(1240, -16)
+
+[node name="NativeTrader" parent="Facilities" instance=ExtResource("30_trader")]
+position = Vector2(1320, -16)
+
+[node name="FacilitySignpost" parent="Facilities" instance=ExtResource("31_signpost")]
+position = Vector2(1400, -16)
+
+[node name="Monsters" type="Node2D" parent="."]
+
+[node name="CoGhostA" parent="Monsters" instance=ExtResource("12_ghost")]
+position = Vector2(1550, -30)
+
+[node name="CoGhostB" parent="Monsters" instance=ExtResource("12_ghost")]
+position = Vector2(2000, -30)
+
+[node name="MistSpawner" type="Node2D" parent="Monsters"]
+script = ExtResource("3_spawner")
+
+[node name="AcademyBuilding" parent="." instance=ExtResource("19_academy")]
+position = Vector2(-110, -40)
+
+[node name="Explosion" parent="." instance=ExtResource("20_boom")]
+
+[node name="CanvasModulate" type="CanvasModulate" parent="."]
+
+[node name="FadeLayer" type="CanvasLayer" parent="."]
+layer = 8
+
+[node name="FadeRect" type="ColorRect" parent="FadeLayer"]
+modulate = Color(1, 1, 1, 0)
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 1)
+
+[node name="UILayer" type="CanvasLayer" parent="."]
+
+[node name="HUD" parent="UILayer" instance=ExtResource("21_hud")]
+
+[node name="TipLayer" parent="UILayer" instance=ExtResource("22_tip")]
+
+[node name="CraftPanel" parent="UILayer" instance=ExtResource("23_craft")]
+
+[node name="CardPopup" parent="UILayer" instance=ExtResource("24_card")]
+
+[node name="InventoryPanel" parent="UILayer" instance=ExtResource("25_inv")]
+
+[node name="WorldMapPanel" parent="UILayer" instance=ExtResource("26_map")]
+
+[node name="CodexPanel" parent="UILayer" instance=ExtResource("27_codex")]
+
+[node name="DeathScreen" parent="UILayer" instance=ExtResource("28_death")]
+
+[node name="PauseMenu" parent="UILayer" instance=ExtResource("29_pause")]
+
+[node name="UIManager" type="Node" parent="UILayer"]
+script = ExtResource("4_uimgr")

@@ -8,6 +8,10 @@ extends Control
 const BAL_LOW_OXYGEN: String = "stats.hud_low_oxygen_threshold"
 const FALLBACK_LOW_OXYGEN: float = 30.0
 const TIP_OXYGEN_LOW: String = "sys_oxygen_low"
+# 氧气首次跌破教程阈值（70）时的一次性引导横幅（FR-U-02 AC2，SPEC-05 §3.2）。
+const BAL_TUTORIAL_OXYGEN: String = "stats.tutorial_oxygen_hint_at"
+const FALLBACK_TUTORIAL_OXYGEN: float = 70.0
+const TIP_OXYGEN_TUTORIAL: String = "sys_oxygen_tutorial"
 const UI_COLLECTED_COUNTER: String = "collected_counter"
 const UI_TIME_DAY: String = "hud_day"
 const UI_TIME_NIGHT: String = "hud_night"
@@ -21,6 +25,8 @@ const FLASH_HALF_PERIOD: float = 0.4
 var _gm: Node = null
 var _oxygen_warning: bool = false
 var _flash_tween: Tween = null
+# 一次性标记（FR-U-02 AC2）：跌破后回升再跌破不重复，不依赖字幕引擎的 once。
+var _tutorial_hint_shown: bool = false
 
 @onready var _oxygen_bar: ProgressBar = %OxygenBar
 @onready var _energy_bar: ProgressBar = %EnergyBar
@@ -79,7 +85,26 @@ func _sync_from_gm() -> void:
 func _on_oxygen_changed(current: float, max_value: float) -> void:
 	_oxygen_bar.max_value = max_value
 	_oxygen_bar.value = current
+	_show_tutorial_hint_once(current)
 	_set_oxygen_warning(current < _low_oxygen_threshold())
+
+
+# FR-U-02 AC2：氧气首次跌破教程阈值时引导一次（横幅走数据表，HUD 内一次性标记）。
+func _show_tutorial_hint_once(current: float) -> void:
+	if _tutorial_hint_shown:
+		return
+	if current >= _tutorial_oxygen_threshold():
+		return
+	_tutorial_hint_shown = true
+	var tip: Node = get_node_or_null(^"/root/KnowledgeTip")
+	if tip != null:
+		tip.show(TIP_OXYGEN_TUTORIAL)
+
+
+func _tutorial_oxygen_threshold() -> float:
+	if _gm == null:
+		return FALLBACK_TUTORIAL_OXYGEN
+	return float(_gm.get_balance(BAL_TUTORIAL_OXYGEN, FALLBACK_TUTORIAL_OXYGEN))
 
 
 func _on_energy_changed(current: float, max_value: float) -> void:

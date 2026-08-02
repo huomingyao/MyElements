@@ -6,6 +6,9 @@ extends "res://scenes/gameplay/facility_base.gd"
 
 const TIP_SLEEP: String = "sys_sleep"
 
+# 睡觉完成后通知世界播渐黑过场（FR-C-05 表现段）。
+signal slept()
+
 # ==== 逻辑区 ====
 
 # 睡觉是跳夜（FR-C-05 AC1「夜晚在床上交互后」）：白天不弹出提示气泡。
@@ -26,3 +29,4 @@ func interact(_player: Node) -> void:
 		return
 	gm.sleep_until_morning()
 	_show_tip(TIP_SLEEP)
+	slept.emit()

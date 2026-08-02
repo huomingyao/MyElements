@@ -3,7 +3,13 @@
     "oxygen_max": 100.0,
     "energy_max": 100.0,
     "health_max": 100.0,
-    "oxygen_drain": { "grassland": 0.5, "camp": 0.5, "saltlake": 0.0, "mine": 2.0, "academy": 0.0 },
+    "oxygen_drain": {
+      "grassland": 0.5,
+      "camp": 0.5,
+      "saltlake": 0.0,
+      "mine": 2.0,
+      "academy": 0.0
+    },
     "oxygen_regen_safe": 1.0,
     "energy_drain": 0.3,
     "health_regen_campfire": 1.0,
@@ -39,10 +45,23 @@
   },
   "items": {
     "oxygen_tank_restore": 50.0,
-    "glucose_restore": 20.0,
-    "campfire_meal_restore": 40.0
+    "campfire_meal_restore": 40.0,
+    "trade_energy_restore": 20.0
   },
-  "inventory": { "hotbar_slots": 8, "stack_limit": 99 },
-  "llm": { "timeout_seconds": 8.0, "retry_count": 1, "history_rounds": 4, "max_tokens": 300, "temperature": 0.7, "input_max_chars": 200 },
-  "debug": { "force_purity_unlock": false, "fast_daynight": false }
+  "inventory": {
+    "hotbar_slots": 8,
+    "stack_limit": 99
+  },
+  "llm": {
+    "timeout_seconds": 8.0,
+    "retry_count": 1,
+    "history_rounds": 4,
+    "max_tokens": 300,
+    "temperature": 0.7,
+    "input_max_chars": 200
+  },
+  "debug": {
+    "force_purity_unlock": false,
+    "fast_daynight": false
+  }
 }

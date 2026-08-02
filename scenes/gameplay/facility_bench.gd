@@ -10,6 +10,9 @@ const INPUT_ID: String = "crude_salt"
 const STEP_DISSOLVE: String = "dissolve"
 const TIP_CRAFT_HINT: String = "sys_craft_hint"
 
+# 空台交互：通知世界打开通用合成界面（FR-G-05 入口，TP-07 补接线）。
+signal craft_requested(player: Node)
+
 # ==== 逻辑区 ====
 
 var _purifier: RefCounted = null
@@ -39,5 +42,6 @@ func interact(player: Node) -> void:
 	if inventory != null and bool(inventory.has_item(INPUT_ID, 1)):
 		_purifier.advance(STEP_DISSOLVE, inventory)
 		return
-	# 空台：引导玩家使用合成（通用合成界面由 TP-07 接线）。
+	# 空台：引导玩家使用合成，并通知世界打开通用合成界面（FR-G-05）。
 	_show_tip(TIP_CRAFT_HINT)
+	craft_requested.emit(player)

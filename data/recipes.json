@@ -1,10 +1,15 @@
 [
   {
     "id": "r_sulfur_torch",
-    "inputs": ["stick", "s"],
+    "inputs": [
+      "stick",
+      "s"
+    ],
     "tool": "portable",
     "condition": "ignite",
-    "outputs": ["sulfur_torch"],
+    "outputs": [
+      "sulfur_torch"
+    ],
     "equation": "S + O₂ =点燃= SO₂",
     "card_title": "硫的燃烧",
     "card_body": "硫在空气中燃烧发出淡蓝色火焰，生成有刺激性气味的二氧化硫",
@@ -15,10 +20,14 @@
   },
   {
     "id": "r_carbon_burn",
-    "inputs": ["c"],
+    "inputs": [
+      "c"
+    ],
     "tool": "alcohol_lamp",
     "condition": "ignite",
-    "outputs": ["co2"],
+    "outputs": [
+      "co2"
+    ],
     "equation": "C + O₂ =点燃= CO₂",
     "card_title": "碳的充分燃烧",
     "card_body": "碳在氧气充足时充分燃烧，发白光，生成二氧化碳",
@@ -29,10 +38,14 @@
   },
   {
     "id": "r_carbon_incomplete",
-    "inputs": ["c"],
+    "inputs": [
+      "c"
+    ],
     "tool": "alcohol_lamp",
     "condition": "low_oxygen",
-    "outputs": ["co"],
+    "outputs": [
+      "co"
+    ],
     "equation": "2C + O₂ =点燃= 2CO",
     "card_title": "不充分燃烧的代价",
     "card_body": "氧气不足时碳不充分燃烧，生成剧毒的一氧化碳",
@@ -43,10 +56,15 @@
   },
   {
     "id": "r_hydrogen_burn",
-    "inputs": ["h2", "o2"],
+    "inputs": [
+      "h2",
+      "o2"
+    ],
     "tool": "portable",
     "condition": "ignite",
-    "outputs": ["h2o"],
+    "outputs": [
+      "h2o"
+    ],
     "equation": "2H₂ + O₂ =点燃= 2H₂O",
     "card_title": "氢气的燃烧",
     "card_body": "氢气燃烧只生成水，是最清洁的燃料；不纯点燃会爆炸",
@@ -57,10 +75,15 @@
   },
   {
     "id": "r_electrolysis",
-    "inputs": ["h2o_clean"],
+    "inputs": [
+      "h2o_clean"
+    ],
     "tool": "electrolyzer",
     "condition": "electrify",
-    "outputs": ["h2", "o2"],
+    "outputs": [
+      "h2",
+      "o2"
+    ],
     "equation": "2H₂O =通电= 2H₂↑ + O₂↑",
     "card_title": "电解水",
     "card_body": "电解水：正极产生氧气，负极产生氢气，体积比 1:2",
@@ -71,10 +94,15 @@
   },
   {
     "id": "r_neutralize",
-    "inputs": ["hcl", "naoh"],
+    "inputs": [
+      "hcl",
+      "naoh"
+    ],
     "tool": "bench",
     "condition": "none",
-    "outputs": ["neutral_spray"],
+    "outputs": [
+      "neutral_spray"
+    ],
     "equation": "HCl + NaOH = NaCl + H₂O",
     "card_title": "中和反应",
     "card_body": "酸和碱反应生成盐和水，叫中和反应；应用：治胃酸过多、改良酸性土壤",
@@ -85,10 +113,15 @@
   },
   {
     "id": "r_co2_lab",
-    "inputs": ["caco3", "hcl"],
+    "inputs": [
+      "caco3",
+      "hcl"
+    ],
     "tool": "bench",
     "condition": "none",
-    "outputs": ["co2"],
+    "outputs": [
+      "co2"
+    ],
     "equation": "CaCO₃ + 2HCl = CaCl₂ + H₂O + CO₂↑",
     "card_title": "实验室制二氧化碳",
     "card_body": "实验室制取二氧化碳：大理石与稀盐酸反应，有气泡产生",
@@ -99,10 +132,15 @@
   },
   {
     "id": "r_co2_test",
-    "inputs": ["co2", "caoh2"],
+    "inputs": [
+      "co2",
+      "caoh2"
+    ],
     "tool": "bench",
     "condition": "none",
-    "outputs": ["caco3"],
+    "outputs": [
+      "caco3"
+    ],
     "equation": "CO₂ + Ca(OH)₂ = CaCO₃↓ + H₂O",
     "card_title": "检验二氧化碳",
     "card_body": "二氧化碳使澄清石灰水变浑浊——这是检验 CO₂ 的方法",
@@ -113,10 +151,15 @@
   },
   {
     "id": "r_wet_copper",
-    "inputs": ["fe", "cuso4"],
+    "inputs": [
+      "fe",
+      "cuso4"
+    ],
     "tool": "bench",
     "condition": "none",
-    "outputs": ["cu"],
+    "outputs": [
+      "cu"
+    ],
     "equation": "Fe + CuSO₄ = Cu + FeSO₄",
     "card_title": "湿法炼铜",
     "card_body": "铁表面析出红色铜，溶液由蓝色变浅绿色——铁比铜活泼",
@@ -127,10 +170,15 @@
   },
   {
     "id": "r_extinguisher",
-    "inputs": ["nahco3", "hcl"],
+    "inputs": [
+      "nahco3",
+      "hcl"
+    ],
     "tool": "bench",
     "condition": "none",
-    "outputs": ["extinguisher"],
+    "outputs": [
+      "extinguisher"
+    ],
     "equation": "NaHCO₃ + HCl = NaCl + H₂O + CO₂↑",
     "card_title": "灭火器原理",
     "card_body": "碳酸氢钠与酸反应快速产生二氧化碳，隔绝氧气灭火",
@@ -141,15 +189,37 @@
   },
   {
     "id": "r_salt_purify",
-    "inputs": ["crude_salt"],
+    "inputs": [
+      "crude_salt"
+    ],
     "tool": "bench",
     "condition": "three_step",
-    "outputs": ["nacl"],
+    "outputs": [
+      "nacl"
+    ],
     "equation": "（物理过程，无化学方程式）",
     "card_title": "粗盐提纯",
     "card_body": "粗盐提纯三步：溶解（粗盐消失，分子均匀分散）→ 过滤（泥沙留在滤纸上）→ 蒸发（水分蒸干，析出白色晶体）。注意：这是物理变化，没有生成新物质",
     "card_application": "海水晒盐后的粗盐提纯，食盐从这里来",
     "unlock_tip": "sys_purify",
+    "requires_pure_check": false,
+    "is_physical": true
+  },
+  {
+    "id": "r_carbon_activate",
+    "inputs": [
+      "c"
+    ],
+    "tool": "alcohol_lamp",
+    "condition": "heat",
+    "outputs": [
+      "activated_carbon"
+    ],
+    "equation": "（物理过程，无化学方程式）",
+    "card_title": "活性炭的活化",
+    "card_body": "木炭高温活化后变得疏松多孔，表面积剧增，吸附能力大大增强——活化是物理变化。",
+    "card_application": "防毒面具里的活性炭层，吸附毒气分子保护呼吸。",
+    "unlock_tip": "",
     "requires_pure_check": false,
     "is_physical": true
   }

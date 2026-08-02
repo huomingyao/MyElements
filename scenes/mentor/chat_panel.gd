@@ -47,6 +47,7 @@ var typing_chars_per_second: float = DEFAULT_TYPING_SPEED
 var _router: RefCounted = null
 var _registry: RefCounted = null
 var _client: Node = null
+var _hydrogen: RefCounted = null
 var _open: bool = false
 var _busy: bool = false
 var _typing: bool = false
@@ -87,6 +88,11 @@ func set_router(router: RefCounted) -> void:
 # 测试注入口：注入假客户端后不碰真实 LLMClient（也就完全不碰网络与 user://）。
 func set_client(client: Node) -> void:
 	_client = client
+
+
+# 世界接线入口（FR-G-09 AC1）：注入共享的 HydrogenEvent；未注入时惰性自建。
+func set_hydrogen_event(event: RefCounted) -> void:
+	_hydrogen = event
 
 
 func open_chat(mentor_id: String) -> void:
@@ -140,9 +146,18 @@ func send_text(raw: String) -> void:
 	if _router == null:
 		_router = RouterScript.new()
 	var messages: Array = await _router.handle_message(clean)
+	_maybe_unlock_purity(clean)
 	await _type_all(messages)
 	_busy = false
 	_send_button.disabled = false
+
+
+# 问过氢气/爆炸/验纯相关问题 → 解锁验纯步骤（FR-G-09 AC1，SPEC-02 §4.5 的导师回调）。
+func _maybe_unlock_purity(question: String) -> void:
+	if _hydrogen == null:
+		_hydrogen = (load("res://scripts/gameplay/hydrogen_event.gd") as GDScript).new()
+	if _hydrogen.question_mentions_hydrogen(question):
+		_hydrogen.unlock_purity_check()
 
 
 func _unhandled_input(event: InputEvent) -> void:

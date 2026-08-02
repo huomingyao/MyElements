@@ -218,7 +218,7 @@ func test_check7_recipe_and_mentor_and_worldmap_counts_reported() -> void:
 	var recipe_rows: Array = (recipes["recipes.json"] as Array).duplicate(true)
 	recipe_rows.remove_at(0)
 	recipes["recipes.json"] = recipe_rows
-	_assert_error_mentions(_errors_of(recipes), ["recipes.json", "11", "10"], "第 7 类：配方条数")
+	_assert_error_mentions(_errors_of(recipes), ["recipes.json", "12", "11"], "第 7 类：配方条数")
 
 	var mentors: Dictionary = _baseline()
 	var mentor_rows: Array = (mentors["mentors.json"] as Array).duplicate(true)

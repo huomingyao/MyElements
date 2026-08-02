@@ -18,6 +18,7 @@ const TYPE_CONSUME: String = "consume"
 
 # effect 枚举见 SPEC-04 §10；这里只放键名，效果数值一律走 balance。
 const EFFECT_KILL_ACID: String = "kill_acid"
+const EFFECT_KILL_CO: String = "kill_co"
 const EFFECT_RESTORE_OXYGEN: String = "restore_oxygen"
 const EFFECT_RESTORE_ENERGY: String = "restore_energy"
 const EFFECT_NONE: String = "none"
@@ -138,8 +139,11 @@ func use_item(item_id: String, inventory: RefCounted, target: Node = null) -> Di
 	if type != TYPE_CONSUME or effect == EFFECT_NONE:
 		result[R_REASON] = "not_usable"
 		return result
-	# 消耗型：喷雾必须命中目标才许使用，不许对空气浪费。
+	# 消耗型：砸怪类道具必须命中目标才许使用，不许对空气浪费。
 	if effect == EFFECT_KILL_ACID and (target == null or not target.has_method("hit_by_spray")):
+		result[R_REASON] = "no_target"
+		return result
+	if effect == EFFECT_KILL_CO and (target == null or not target.has_method("hit_by_carbon")):
 		result[R_REASON] = "no_target"
 		return result
 	if inventory == null or not inventory.has_item(item_id, 1):
@@ -165,6 +169,8 @@ func _apply_effect(effect: String, value: float, target: Node) -> void:
 				gm.modify_energy(value)
 		EFFECT_KILL_ACID:
 			target.hit_by_spray()
+		EFFECT_KILL_CO:
+			target.hit_by_carbon()
 
 
 func _show_tip(tip_id: String) -> void:

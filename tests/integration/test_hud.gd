@@ -7,7 +7,12 @@ const Fixture: GDScript = preload("res://tests/data/json_fixture.gd")
 const HUD_SCENE: String = "res://scenes/main/hud.tscn"
 const HUD_SCRIPT: String = "res://scenes/main/hud.gd"
 const TIP_OXYGEN_LOW: String = "sys_oxygen_low"
+const TIP_OXYGEN_TUTORIAL: String = "sys_oxygen_tutorial"
 const BAL_LOW_OXYGEN: String = "stats.hud_low_oxygen_threshold"
+const BAL_TUTORIAL_OXYGEN: String = "stats.tutorial_oxygen_hint_at"
+const COLOR_OXYGEN: Color = Color("6fd6e8")
+const COLOR_ENERGY: Color = Color("ffd94a")
+const COLOR_HEALTH: Color = Color("e2542b")
 const BAL_DAY_DURATION: String = "daynight.day_duration"
 const BAL_NIGHT_DURATION: String = "daynight.night_duration"
 const UI_COLLECTED: String = "collected_counter"
@@ -16,6 +21,7 @@ var _hud: Node = null
 var _gm: Node = null
 var _tip: Node = null
 var _low_tip_count: int = 0
+var _tutorial_tip_count: int = 0
 
 
 func before_each() -> void:
@@ -32,6 +38,7 @@ func before_each() -> void:
 	_gm.set_zone("grassland")
 	_tip.clear_queue()
 	_low_tip_count = 0
+	_tutorial_tip_count = 0
 	if not ResourceLoader.exists(HUD_SCENE):
 		fail_test("尚未实现 %s（FR-C-07 / TP-12）" % HUD_SCENE)
 		return
@@ -74,6 +81,8 @@ func _node(unique_name: String) -> Node:
 func _on_tip_shown(tip_id: String) -> void:
 	if tip_id == TIP_OXYGEN_LOW:
 		_low_tip_count += 1
+	if tip_id == TIP_OXYGEN_TUTORIAL:
+		_tutorial_tip_count += 1
 
 
 # 把氧气精确设到目标值（走公开 modify 接口，信号照常发）。
@@ -123,6 +132,62 @@ func test_collected_counter_uses_ui_strings_format() -> void:
 	assert_eq(str(label.text), template.format({"n": 3}), "计数 3 时按数据表格式显示")
 	_hud.set_collected(16)
 	assert_eq(str(label.text), template.format({"n": 16}), "计数 16 时按数据表格式显示")
+
+
+# FR-U-02 AC2 / SPEC-05 §3.2：氧气首次跌破 stats.tutorial_oxygen_hint_at（70）触发一次
+# sys_oxygen_tutorial 横幅；回升后再跌破不重复（HUD 内一次性标记，不依赖字幕引擎 once）。
+func test_tutorial_hint_fires_once_below_tutorial_threshold() -> void:
+	if _skip_unless_ready():
+		return
+	var threshold: float = float(_gm.get_balance(BAL_TUTORIAL_OXYGEN, 70.0))
+	_tip.tip_shown.connect(_on_tip_shown)
+	_set_oxygen(threshold + 1.0)
+	assert_eq(_tutorial_tip_count, 0, "高于教程阈值不应触发 %s" % TIP_OXYGEN_TUTORIAL)
+	_set_oxygen(threshold - 1.0)
+	assert_eq(_tutorial_tip_count, 1, "首次跌破教程阈值应触发一次 %s" % TIP_OXYGEN_TUTORIAL)
+	_tip.clear_queue() # 清掉上一条，让下一条（若有）能立即上台发 tip_shown
+	_set_oxygen(threshold + 10.0)
+	_set_oxygen(threshold - 1.0)
+	assert_eq(_tutorial_tip_count, 1, "回升后再次跌破不应重复触发教程提示")
+
+
+# 教程提示触发时，30 低氧闪烁与 sys_oxygen_low 行为不回归：
+# 氧气在 30~70 之间只出教程横幅，不进低氧闪烁。
+func test_tutorial_hint_does_not_trigger_low_oxygen_warning() -> void:
+	if _skip_unless_ready(["is_oxygen_warning"]):
+		return
+	var tutorial_at: float = float(_gm.get_balance(BAL_TUTORIAL_OXYGEN, 70.0))
+	var low_at: float = float(_gm.get_balance(BAL_LOW_OXYGEN, 30.0))
+	_tip.tip_shown.connect(_on_tip_shown)
+	_set_oxygen((tutorial_at + low_at) / 2.0)
+	assert_false(_hud.is_oxygen_warning(), "氧气在教程阈值与低氧阈值之间不应闪烁")
+	assert_eq(_low_tip_count, 0, "氧气在教程阈值与低氧阈值之间不应触发 %s" % TIP_OXYGEN_LOW)
+
+
+# SPEC-08 §2：三条数值条按语义色上色（fill 样式，不与低氧闪烁的 modulate:a 冲突）。
+func test_bars_use_semantic_colors() -> void:
+	if _skip_unless_ready():
+		return
+	var cases: Array = [
+		["OxygenBar", COLOR_OXYGEN],
+		["EnergyBar", COLOR_ENERGY],
+		["HealthBar", COLOR_HEALTH],
+	]
+	for case_row: Array in cases:
+		var bar: ProgressBar = _node(str(case_row[0])) as ProgressBar
+		if bar == null:
+			continue
+		var fill: StyleBox = bar.get_theme_stylebox("fill")
+		assert_not_null(fill, "%s 应有 fill 样式" % bar.name)
+		if fill is StyleBoxFlat:
+			var actual: Color = (fill as StyleBoxFlat).bg_color
+			var expected: Color = case_row[1]
+			assert_almost_eq(actual.r, expected.r, 0.004, "%s fill 红色通道应为语义色" % bar.name)
+			assert_almost_eq(actual.g, expected.g, 0.004, "%s fill 绿色通道应为语义色" % bar.name)
+			assert_almost_eq(actual.b, expected.b, 0.004, "%s fill 蓝色通道应为语义色" % bar.name)
+		else:
+			fail_test("%s 的 fill 应为 StyleBoxFlat，实际：%s" % [bar.name, fill])
+
 
 
 # AC3：氧气低于阈值 → 闪烁标记 + 触发一次 sys_oxygen_low；持续低氧不重复；

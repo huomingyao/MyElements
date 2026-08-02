@@ -66,27 +66,27 @@
 - [ ] P0-6 美术第一批生成提示词已发出（SPEC-08 §4）
 
 ### Phase 1 — 底座（H1–H4）
-- [~] P1-1 玩家控制器 + 相机 + 白盒地图（FR-P-01..03）（TP-04：`player.tscn` 按 SPEC-03 §5.1 结构落地，移动/跳跃/重力/朝向 + 低能量 ×0.5 全读 balance，交互只调 §5 三方法 + 最近目标 + 气泡走 `get_ui_string`，相机 `set_map_bounds` 四条 limit + 火把半径 80↔220 切换，IT-P01 7 项 + IT-P02 5 项 + IT-P03 6 项全绿；白盒地图铺图归 P5 `maps/`，ViewLight 纹理待 P4）
+- [x] P1-1 玩家控制器 + 相机 + 白盒地图（FR-P-01..03）（TP-04 全绿同前；TP-17：`maps/whitebox_map.tscn` 四区+学院白盒布局落地、采集物标记撒布；ViewLight 纹理与美术待 P4）
 - [x] P1-2 三值系统 + HUD（FR-C-02、FR-C-07）（TP-03：三值结算与信号，UT-C02 10 项全绿；TP-12：HUD 三条数值条纯信号驱动无 `_process` 轮询 + 已收集计数 + 时间指示 + 低氧闪烁/一次字幕，IT-C07 7 项全绿）
-- [x] P1-3 昼夜循环（FR-C-04）（TP-03：`tick(delta)` 时钟，UT-C04 10 项全绿；CanvasModulate 变暗待 TP-12）
-- [~] P1-4 采集与背包（FR-G-01..03）（TP-06：`inventory.gd` 8 格×99 堆叠 + 溢出/退回/全或无扣减，UT-G02 18 项全绿；`discovery.gd` 首次收集统计 + 16 计数集合数自数据表，UT-G03 13 项全绿。采集物场景 FR-G-01 与背包界面 FR-U-05 待 P4 出图 / TP-11）
-- [~] P1-5 配方引擎 + 合成台（FR-G-04..05）（TP-07：`try_craft` 规则 1~5 + 11 条配方逐条正例，UT-G04 18 项全绿；合成台 UI 待 TP-11）
-- [x] P1-6 字幕引擎（FR-U-01）（TP-05：串行队列 + warning 打断 + once 去重，UT-U01 15 项全绿；渲染层 `scenes/ui/tip_*.tscn` 待 P4 出图）
+- [x] P1-3 昼夜循环（FR-C-04）（TP-03：`tick(delta)` 时钟，UT-C04 10 项全绿；TP-17：CanvasModulate 昼夜 tint 接线，test_world 覆盖）
+- [x] P1-4 采集与背包（FR-G-01..03）（TP-06：`inventory.gd` UT-G02 18 项、`discovery.gd` UT-G03 13 项全绿；TP-06 补：`collectable.*` 采集物场景 IT-G01 9 项全绿 + `inventory_panel.*` 背包界面 IT-U05 9 项全绿）
+- [x] P1-5 配方引擎 + 合成台（FR-G-04..05）（TP-07：`try_craft` UT-G04 18 项全绿；TP-07 补：`craft_panel.*` 合成界面 IT-G05 14 项全绿，含拖入/取消回包/失败不耗料/三器材）
+- [x] P1-6 字幕引擎（FR-U-01）（TP-05：串行队列 + warning 打断 + once 去重，UT-U01 15 项全绿；TP-05 补：`tip_layer.*` 渲染层 bubble 头顶/banner 底部/warning 红字 6 项全绿）
 - [~] P1-7 LLMClient 打通第一条真实回复（FR-M-07）（TP-15：`build_request_body` 组 OpenAI 兼容请求体（system 人设+后缀 / 历史按轮展开 / 本轮 user 经 `sanitize_input`）+ `max_tokens`/`temperature` 读 balance.json + `set_transport` 单一发包点，IT-M07 9 项全绿。**真实 DeepSeek 往返未验证**：测试全程注入传输层不发真实请求，需配 key 后人工跑一次（MT-B02 同批）；聊天框 UI 待 TP-13）
-- [ ] **H4 检查点**：白盒地图上跑动、拾取、合成出硫火把
+- [x] **H4 检查点**：白盒地图上跑动、拾取、合成出硫火把（test_world.gd 16 项覆盖：白盒地图 + 采集 + 合成台成功合成硫火把弹卡片）
 
 ### Phase 2 — 核心闭环（H4–H12）
 - [x] P2-1 区域判定 + 分区氧气消耗（FR-C-03）（TP-03：五区域净速率 + 首次进入字幕，UT-C03 8 项全绿）
-- [x] P2-2 营地设施：过滤器/电解器/篝火/床（FR-G-13、FR-C-05）（TP-10：`facility_base.gd` 基类统一 §5 三方法 + 四设施 + 实验台 + 湖水，IT-G13 9 项 + IT-C05 3 项全绿；`resources_respawned` 仅断言信号，采集物实体接线归 FR-G-01 线；睡觉渐黑过场属 UI 层未做）
+- [x] P2-2 营地设施：过滤器/电解器/篝火/床（FR-G-13、FR-C-05）（TP-10：`facility_base.gd` 基类统一 §5 三方法 + 四设施 + 实验台 + 湖水，IT-G13 9 项 + IT-C05 3 项全绿；TP-17：采集物清晨刷新与睡觉渐黑过场已接入 world.tscn）
 - [x] P2-3 世界地图页 13 区域（FR-U-03）（TP-12：13 热区全部按 worldmap.json 构建，5 彩 + 8 剪影 + 角标 + 未解锁抖动，IT-U03 6 项全绿；肉眼效果归 MT）
-- [~] P2-4 知识卡片弹窗 + 失败反馈（FR-G-06..07）（TP-07：卡片五字段组装 + 失败文案按 reason 分池确定性轮转，UT-G07 13 项全绿；弹窗 UI 待 TP-11）
-- [x] P2-5 CO 幽灵 + 酸雾怪（FR-G-10..11）（TP-09：幽灵追踪 8/s + 口罩免疫 + `warn_co` 单次字幕，IT-G10 9 项；酸雾怪夜晚刷 2~3 只 + 冲撞单次 -10 + 喷雾消灭，IT-G11 7 项全绿；实机追踪/刷新接线待世界场景）
-- [x] P2-6 **氢气爆炸事件 + 验纯解锁**（FR-G-08..09）（TP-08：`hydrogen_event.gd` 纯逻辑 + `explosion.tscn` 表现层，精确 -50 + warning 字幕 5 秒 + 置标记 + 生命 <50 死亡路径，IT-G08 12 项 + IT-G09 5 项全绿；合成界面「点燃」按钮可见部分待 TP-07 craft_*，导师侧自动解锁接线待 P3）
-- [x] P2-7 导师四房间 + 聊天框 + 立绘（FR-M-01..03）（TP-13：`academy.tscn` 四房间 + ZoneTrigger + `chat_panel` 世界不暂停/逐字打字/idle-talk 切换，IT-M01 6 项 + IT-M02 12 项全绿；立绘为确定性纯色占位，待 P4；学院接入 world.tscn 归 TP-17）
-- [~] P2-8 班主任调度链 + @ 终止约束（FR-M-04..06）（TP-14：`mentor_router.gd` 四类分类器按 dispatch 数组顺序判优先级 + `route_targets` 查表 + `parse_mentions` 最长句柄匹配 + `handle_message` 首条必 monitor/≤3 条/只解析 monitor 的 @/调度计数硬上限 1，UT-M04 9 项 + UT-M05 12 项全绿；`prompt_suffix.gd` 通用后缀拼接，UT-M06 7 项全绿；`sanitize_input` 锁定，UT-M03 7 项全绿。真实 LLM 回复来源待 TP-15，聊天框 UI 待 TP-13）
+- [x] P2-4 知识卡片弹窗 + 失败反馈（FR-G-06..07）（TP-07：卡片五字段组装 + 失败文案按 reason 分池确定性轮转，UT-G07 13 项全绿；TP-07 补：`card_popup.*` 弹窗 IT-G06 6 项全绿，任意键跳过 + 底行 card_footer）
+- [x] P2-5 CO 幽灵 + 酸雾怪（FR-G-10..11）（TP-09：幽灵追踪 8/s + 口罩免疫 + `warn_co` 单次字幕，IT-G10 9 项；酸雾怪夜晚刷 2~3 只 + 冲撞单次 -10 + 喷雾消灭，IT-G11 7 项全绿；TP-17：矿洞常驻幽灵×2 + 草原夜刷 + 营地外围 spawner 已接入 world.tscn）
+- [x] P2-6 **氢气爆炸事件 + 验纯解锁**（FR-G-08..09）（TP-08：`hydrogen_event.gd` 纯逻辑 + `explosion.tscn` 表现层，精确 -50 + warning 字幕 5 秒 + 置标记 + 生命 <50 死亡路径，IT-G08 12 项 + IT-G09 5 项全绿；TP-07 补：合成界面「点燃/验纯」按钮落地；主 Agent 补：导师问氢气 → `question_mentions_hydrogen`（关键词读 qa_fallback 表）→ 解锁接线，3 项全绿）
+- [x] P2-7 导师四房间 + 聊天框 + 立绘（FR-M-01..03）（TP-13：`academy.tscn` 四房间 + ZoneTrigger + `chat_panel` 世界不暂停/逐字打字/idle-talk 切换，IT-M01 6 项 + IT-M02 12 项全绿；立绘为确定性纯色占位，待 P4；TP-17：学院已实例接入 world.tscn，聊天框注册进 ui_manager 不屏蔽输入）
+- [x] P2-8 班主任调度链 + @ 终止约束（FR-M-04..06）（TP-14：`mentor_router.gd` 四类分类器按 dispatch 数组顺序判优先级 + `route_targets` 查表 + `parse_mentions` 最长句柄匹配 + `handle_message` 首条必 monitor/≤3 条/只解析 monitor 的 @/调度计数硬上限 1，UT-M04 9 项 + UT-M05 12 项全绿；`prompt_suffix.gd` 通用后缀拼接，UT-M06 7 项全绿；`sanitize_input` 锁定，UT-M03 7 项全绿。回复来源 TP-15 与聊天框 TP-13 均已落地）
 - [~] P2-9 离线兜底 + 超时切换（FR-M-08..10）（TP-15：四种失败（超时/网络错/非 200/畸形 body）统一收口成空串再兜底 + 重试上限 `retry_count` + 失败即转离线 + `mode_changed` 只在真变化时发，UT-M08 13 项全绿；`qa_fallback.gd` 命中最多者胜/平票取先/零命中取表中兜底行 + 角标由调用方追加，UT-M09 9 项全绿；`config_panel.tscn` key 只转发给 `set_api_key`（`secret=true`、不回显不记录）+ 手动离线开关 + 滑块可拖不生效，IT-M10 11 项全绿。**未能实机验证**：滑块手感与面板排版归 MT-M10 人工确认，godot_mcp 本会话未注册；拔网线全流程归 MT-B02）
-- [x] P2-10 道具生效（FR-G-12）（TP-09：`item_effects.gd` 八种道具效果按 `effect_value_key` 动态读 balance，装备不消耗/消耗品 -1/无目标不消耗，UT-G12 14 项全绿；装备 UI 接线待背包界面）
-- [x] P2-11 死亡/复活/掉落（FR-C-06）（TP-11：死亡画面 + `drop_bag` 掉落包快照/替换语义 + 复活三值回满，IT-C06 11 项全绿；世界场景生成掉落包的一行接线归 TP-17）
+- [x] P2-10 道具生效（FR-G-12）（TP-09：`item_effects.gd` 八种道具效果按 `effect_value_key` 动态读 balance，装备不消耗/消耗品 -1/无目标不消耗，UT-G12 14 项全绿；TP-17：use_item 1-8 热键接线，装备切换 + 消耗结算 + 火把视野已通）
+- [x] P2-11 死亡/复活/掉落（FR-C-06）（TP-11：死亡画面 + `drop_bag` 掉落包快照/替换语义 + 复活三值回满，IT-C06 11 项全绿；TP-17：世界场景死亡生成掉落包 + 复活回床接线完成）
 - [x] P2-12 主菜单三个门（FR-C-08）（TP-12：三门导航 world/academy/codex + Esc 暂停菜单，IT-C08 7 项全绿；加载 ≤3 秒归 MT-B01 掐表）
 - [x] P2-13 图鉴（FR-U-04）（TP-16：17 格网格自数据表得出 + 剪影零泄露全量扫描 + 分类标签 + 循环翻页，IT-U04 12 项全绿；肉眼观感归 MT）
 - [x] P2-14 粗盐提纯三步（FR-G-14）（TP-10：`facility_salt_purifier.gd` 顺序强制状态机 + 肥皂水试湖水，IT-G14 9 项全绿）
@@ -117,3 +117,5 @@ FR → 验收标准 → 测试用例 → Checklist 项 的完整映射见
 | 日期 | 版本 | 变更 | 触发人 |
 |---|---|---|---|
 | 2026-08-01 | v1.0 | 由 `plan/` 三份草案重写为九册规格文档集，引入 FR/AC/测试编号体系 | 用户 |
+| 2026-08-02 | v1.1 | TP-17 世界总装 + 四个 UI 件（合成台/卡片/背包/字幕层）+ 导师验纯解锁接线落地；SPEC-02 §8 补 `codex` 热键、SPEC-05 §1 试剂三物来源裁决、§9 新增 7 个 ui_strings 键、SPEC-03 §9 补 8 行变更记录 | 主 Agent |
+| 2026-08-02 | v1.2 | WORKLOG A/B 级缺口全收口（碳口罩落地+幽灵 AC5 免疫、电解器灌装氧气瓶、路牌开地图页、氧气 70 教程提示、矿洞呼吸/光合作用字幕、R3 低氧点燃、unlock_tip 消费、ViewLight 兜底、HUD 语义色、学院门传送 D2）；SPEC-01 FR-G-10 增 AC5、FR-C-08 AC1 记 D2；SPEC-05 §1/§3.2/§8、SPEC-02 §4.4/§5、SPEC-04 §10、SPEC-08 §6、SPEC-09 §3.1 同步；交付骨架 README.txt/export_presets.cfg/BUGS.md 落地 | 主 Agent |

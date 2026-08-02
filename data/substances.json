@@ -5,7 +5,9 @@
     "formula": "O₂",
     "category": "单质",
     "tip_id": "tip_o2",
-    "zone": ["grassland"],
+    "zone": [
+      "grassland"
+    ],
     "icon": "res://assets/art/icons/o2.png",
     "codex_line": "生命与燃烧都离不开它，但它自己不会燃烧。",
     "stackable": true,
@@ -17,7 +19,9 @@
     "formula": "H₂",
     "category": "单质",
     "tip_id": "tip_h2",
-    "zone": ["camp"],
+    "zone": [
+      "camp"
+    ],
     "icon": "res://assets/art/icons/h2.png",
     "codex_line": "最清洁的燃料，也是最\"暴脾气\"的气体——验纯！",
     "stackable": true,
@@ -29,7 +33,9 @@
     "formula": "C",
     "category": "单质",
     "tip_id": "tip_c",
-    "zone": ["grassland"],
+    "zone": [
+      "grassland"
+    ],
     "icon": "res://assets/art/icons/c.png",
     "codex_line": "充分燃烧生 CO₂，不充分生 CO——氧气多少决定产物。",
     "stackable": true,
@@ -41,7 +47,9 @@
     "formula": "S",
     "category": "单质",
     "tip_id": "tip_s",
-    "zone": ["mine"],
+    "zone": [
+      "mine"
+    ],
     "icon": "res://assets/art/icons/s.png",
     "codex_line": "淡黄色粉末，点燃就是一把好火把，代价是刺激性气味。",
     "stackable": true,
@@ -53,7 +61,9 @@
     "formula": "CO",
     "category": "化合物",
     "tip_id": "tip_co",
-    "zone": ["mine"],
+    "zone": [
+      "mine"
+    ],
     "icon": "res://assets/art/icons/co.png",
     "codex_line": "沉默的杀手，活性炭口罩是它的克星。",
     "stackable": true,
@@ -77,7 +87,9 @@
     "formula": "H₂O",
     "category": "化合物",
     "tip_id": "tip_h2o",
-    "zone": ["camp"],
+    "zone": [
+      "camp"
+    ],
     "icon": "res://assets/art/icons/h2o.png",
     "codex_line": "最常见的溶剂，净化四步后才配进实验室。",
     "stackable": true,
@@ -89,7 +101,9 @@
     "formula": "H₂O",
     "category": "化合物",
     "tip_id": "tip_h2o_clean",
-    "zone": ["camp"],
+    "zone": [
+      "camp"
+    ],
     "icon": "res://assets/art/icons/h2o_clean.png",
     "codex_line": "蒸馏水，纯净物——实验台上唯一合格的水。",
     "stackable": true,
@@ -101,7 +115,9 @@
     "formula": "CaCO₃",
     "category": "盐",
     "tip_id": "tip_caco3",
-    "zone": ["mine"],
+    "zone": [
+      "mine"
+    ],
     "icon": "res://assets/art/icons/caco3.png",
     "codex_line": "石灰石、大理石、水垢——它们是同一种物质。",
     "stackable": true,
@@ -113,7 +129,9 @@
     "formula": "Fe₂O₃",
     "category": "氧化物",
     "tip_id": "tip_fe2o3",
-    "zone": ["mine"],
+    "zone": [
+      "mine"
+    ],
     "icon": "res://assets/art/icons/fe2o3.png",
     "codex_line": "赤铁矿的红色，高炉里炼出铁水。",
     "stackable": true,
@@ -125,7 +143,9 @@
     "formula": "CuSO₄",
     "category": "盐",
     "tip_id": "tip_cuso4",
-    "zone": ["mine"],
+    "zone": [
+      "mine"
+    ],
     "icon": "res://assets/art/icons/cuso4.png",
     "codex_line": "漂亮的蓝色，有毒的蓝色。",
     "stackable": true,
@@ -137,7 +157,9 @@
     "formula": "HCl",
     "category": "酸",
     "tip_id": "tip_hcl",
-    "zone": [],
+    "zone": [
+      "camp"
+    ],
     "icon": "res://assets/art/icons/hcl.png",
     "codex_line": "腐蚀性很强，除锈和制 CO₂ 也很强。",
     "stackable": true,
@@ -149,7 +171,9 @@
     "formula": "NaOH",
     "category": "碱",
     "tip_id": "tip_naoh",
-    "zone": [],
+    "zone": [
+      "camp"
+    ],
     "icon": "res://assets/art/icons/naoh.png",
     "codex_line": "烧碱，强腐蚀，中和反应的主力碱。",
     "stackable": true,
@@ -161,7 +185,9 @@
     "formula": "Ca(OH)₂",
     "category": "碱",
     "tip_id": "tip_caoh2",
-    "zone": [],
+    "zone": [
+      "camp"
+    ],
     "icon": "res://assets/art/icons/caoh2.png",
     "codex_line": "熟石灰，改良酸性土壤、检验 CO₂ 都用它。",
     "stackable": true,
@@ -173,7 +199,9 @@
     "formula": "Fe",
     "category": "单质",
     "tip_id": "tip_fe",
-    "zone": ["mine"],
+    "zone": [
+      "mine"
+    ],
     "icon": "res://assets/art/icons/fe.png",
     "codex_line": "会生锈的金属，生锈需要氧气和水同时存在。",
     "stackable": true,
@@ -185,7 +213,9 @@
     "formula": "NaCl（含杂质）",
     "category": "盐",
     "tip_id": "tip_crude_salt",
-    "zone": ["saltlake"],
+    "zone": [
+      "saltlake"
+    ],
     "icon": "res://assets/art/icons/crude_salt.png",
     "codex_line": "湖边的白色结晶，混着泥沙——提纯三步后才是食盐。",
     "stackable": true,

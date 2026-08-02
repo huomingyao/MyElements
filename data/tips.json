@@ -1,49 +1,333 @@
 [
-  { "id": "zone_grass", "style": "banner", "duration": 4.0, "once": true, "text": "空气的成分：氮气约 78%，氧气约 21%" },
-  { "id": "zone_salt", "style": "banner", "duration": 4.0, "once": true, "text": "盐湖的湖水又苦又涩——这是硬水，含较多钙、镁离子" },
-  { "id": "zone_mine", "style": "banner", "duration": 4.0, "once": true, "text": "矿洞氧气稀薄——氧气只占空气的 21%，注意你的氧气值" },
-  { "id": "zone_river", "style": "banner", "duration": 4.0, "once": true, "text": "天然水含杂质，需净化后才能用于实验" },
-  { "id": "zone_camp", "style": "banner", "duration": 4.0, "once": true, "text": "营地：合成、进食、睡觉——炼金术士的家" },
-  { "id": "zone_academy", "style": "banner", "duration": 4.0, "once": true, "text": "导师学院：不懂就问，这里没有笨问题" },
-  { "id": "zone_photosynthesis", "style": "banner", "duration": 4.0, "once": true, "text": "植物的光合作用：吸收 CO₂，释放 O₂" },
-  { "id": "sys_oxygen_low", "style": "banner", "duration": 4.0, "text": "氧气不足！回到开阔地带，或制取氧气" },
-  { "id": "sys_mine_breath", "style": "banner", "duration": 4.0, "text": "氧气不足时呼吸加快——这就是矿洞要通风的原因" },
-  { "id": "sys_energy_food", "style": "banner", "duration": 4.0, "text": "六大营养素：糖类、蛋白质、油脂、维生素、无机盐、水" },
-  { "id": "sys_torch_off_water", "style": "banner", "duration": 4.0, "text": "水下点不着火把——燃烧需要氧气（燃烧三条件之一）" },
-  { "id": "sys_wet_wood", "style": "banner", "duration": 4.0, "text": "湿木头点不着——温度要达到着火点（燃烧三条件之二）" },
-  { "id": "sys_no_fuel", "style": "banner", "duration": 4.0, "text": "没有燃料一切免谈——燃烧三条件之三：可燃物" },
-  { "id": "sys_filter", "style": "banner", "duration": 4.0, "text": "净水四步：沉淀 → 过滤 → 吸附 → 蒸馏" },
-  { "id": "sys_electrolysis", "style": "banner", "duration": 4.0, "text": "电解水：正氧负氢，体积比 1:2" },
-  { "id": "sys_purity_ok", "style": "banner", "duration": 4.0, "text": "\"噗\"的一声轻响——氢气纯净，可以安全点燃了" },
-  { "id": "sys_mask", "style": "banner", "duration": 4.0, "text": "活性炭口罩：活性炭的吸附性——防毒面具的原理" },
-  { "id": "sys_spray", "style": "banner", "duration": 4.0, "text": "中和喷雾：酸+碱→盐+水——酸碱中和反应" },
-  { "id": "sys_sleep", "style": "banner", "duration": 4.0, "text": "睡一觉，生命回满——新的一天，矿脉也刷新了" },
-  { "id": "sys_hardwater", "style": "banner", "duration": 4.0, "text": "硬水遇肥皂水不起沫——用肥皂水可以区分硬水和软水" },
-  { "id": "sys_purify", "style": "banner", "duration": 4.0, "text": "粗盐提纯三步：溶解 → 过滤 → 蒸发，泥沙留在滤纸上" },
-  { "id": "sys_craft_hint", "style": "banner", "duration": 4.0, "text": "把材料放进来，试试化学反应" },
-  { "id": "tip_mass_conservation", "style": "banner", "duration": 4.0, "text": "反应前后原子种类和数目不变——质量守恒定律" },
-  { "id": "sys_explosion_warn", "style": "warning", "duration": 5.0, "text": "氢气不纯点燃会发生爆炸！点燃前必须验纯——去导师学院问问为什么" },
-  { "id": "sys_death", "style": "warning", "duration": 5.0, "text": "你倒下了……化学不等人。回营地床铺醒来吧" },
-  { "id": "warn_co", "style": "warning", "duration": 5.0, "text": "一氧化碳 CO——无色无味的剧毒气体，煤气中毒的元凶！" },
-  { "id": "warn_acid", "style": "warning", "duration": 5.0, "text": "酸雾来袭！酸性物质有腐蚀性——快用中和喷雾" },
-  { "id": "warn_night", "style": "warning", "duration": 5.0, "text": "天黑了。硫火把是你最好的朋友" },
-  { "id": "warn_cuso4", "style": "warning", "duration": 5.0, "text": "蓝色溶液：硫酸铜，重金属盐有毒——别泡在里面" },
-  { "id": "card_footer", "style": "banner", "duration": 4.0, "text": "反应前后原子种类和数目不变——质量守恒定律" },
-  { "id": "tip_o2", "style": "bubble", "duration": 3.0, "once": true, "text": "氧气 O₂——空气中的氧气约占 21%，动植物呼吸都需要它" },
-  { "id": "tip_h2", "style": "bubble", "duration": 3.0, "once": true, "text": "氢气 H₂——最轻的气体，最清洁的燃料，但点燃前必须验纯！" },
-  { "id": "tip_c", "style": "bubble", "duration": 3.0, "once": true, "text": "碳 C——木头燃烧剩下的木炭，主要成分就是碳" },
-  { "id": "tip_s", "style": "bubble", "duration": 3.0, "once": true, "text": "硫 S——淡黄色粉末，易燃，燃烧时有刺激性气味" },
-  { "id": "tip_co", "style": "bubble", "duration": 3.0, "once": true, "text": "一氧化碳 CO——无色无味的剧毒气体，煤气中毒的元凶！" },
-  { "id": "tip_co2", "style": "bubble", "duration": 3.0, "once": true, "text": "二氧化碳 CO₂——不燃烧也不支持燃烧，能使澄清石灰水变浑浊" },
-  { "id": "tip_h2o", "style": "bubble", "duration": 3.0, "once": true, "text": "天然水含杂质——需净化后才能用于实验" },
-  { "id": "tip_h2o_clean", "style": "bubble", "duration": 3.0, "once": true, "text": "蒸馏水是纯净物——沉淀→过滤→吸附→蒸馏，净化四步" },
-  { "id": "tip_caco3", "style": "bubble", "duration": 3.0, "once": true, "text": "碳酸钙 CaCO₃——石灰石、大理石的主要成分" },
-  { "id": "tip_fe2o3", "style": "bubble", "duration": 3.0, "once": true, "text": "氧化铁 Fe₂O₃——赤铁矿的主要成分，炼铁的原料" },
-  { "id": "tip_cuso4", "style": "bubble", "duration": 3.0, "once": true, "text": "硫酸铜 CuSO₄——蓝色溶液，重金属盐有毒，别碰！" },
-  { "id": "tip_hcl", "style": "bubble", "duration": 3.0, "once": true, "text": "盐酸 HCl——有腐蚀性，但也是除锈和制 CO₂ 的好帮手" },
-  { "id": "tip_naoh", "style": "bubble", "duration": 3.0, "once": true, "text": "氢氧化钠 NaOH——俗称烧碱、火碱、苛性钠，强腐蚀性" },
-  { "id": "tip_caoh2", "style": "bubble", "duration": 3.0, "once": true, "text": "氢氧化钙 Ca(OH)₂——熟石灰，其水溶液就是澄清石灰水" },
-  { "id": "tip_fe", "style": "bubble", "duration": 3.0, "once": true, "text": "铁 Fe——最常见的金属，生锈需要氧气和水同时存在" },
-  { "id": "tip_crude_salt", "style": "bubble", "duration": 3.0, "once": true, "text": "粗盐——主要成分是氯化钠，但混有泥沙等杂质，需提纯后才能用" },
-  { "id": "tip_nacl", "style": "bubble", "duration": 3.0, "once": true, "text": "氯化钠 NaCl——由钠离子和氯离子构成，厨房里的食盐就是它" }
+  {
+    "id": "zone_grass",
+    "style": "banner",
+    "duration": 4.0,
+    "once": true,
+    "text": "空气的成分：氮气约 78%，氧气约 21%"
+  },
+  {
+    "id": "zone_salt",
+    "style": "banner",
+    "duration": 4.0,
+    "once": true,
+    "text": "盐湖的湖水又苦又涩——这是硬水，含较多钙、镁离子"
+  },
+  {
+    "id": "zone_mine",
+    "style": "banner",
+    "duration": 4.0,
+    "once": true,
+    "text": "矿洞氧气稀薄——氧气只占空气的 21%，注意你的氧气值"
+  },
+  {
+    "id": "zone_river",
+    "style": "banner",
+    "duration": 4.0,
+    "once": true,
+    "text": "天然水含杂质，需净化后才能用于实验"
+  },
+  {
+    "id": "zone_camp",
+    "style": "banner",
+    "duration": 4.0,
+    "once": true,
+    "text": "营地：合成、进食、睡觉——炼金术士的家"
+  },
+  {
+    "id": "zone_academy",
+    "style": "banner",
+    "duration": 4.0,
+    "once": true,
+    "text": "导师学院：不懂就问，这里没有笨问题"
+  },
+  {
+    "id": "zone_photosynthesis",
+    "style": "banner",
+    "duration": 4.0,
+    "once": true,
+    "text": "植物的光合作用：吸收 CO₂，释放 O₂"
+  },
+  {
+    "id": "sys_oxygen_low",
+    "style": "banner",
+    "duration": 4.0,
+    "text": "氧气不足！回到开阔地带，或制取氧气"
+  },
+  {
+    "id": "sys_oxygen_tutorial",
+    "style": "banner",
+    "duration": 4.0,
+    "once": true,
+    "text": "氧气在消耗——回到开阔地带，或制取氧气"
+  },
+  {
+    "id": "sys_mine_breath",
+    "style": "banner",
+    "duration": 4.0,
+    "text": "氧气不足时呼吸加快——这就是矿洞要通风的原因"
+  },
+  {
+    "id": "sys_energy_food",
+    "style": "banner",
+    "duration": 4.0,
+    "text": "六大营养素：糖类、蛋白质、油脂、维生素、无机盐、水"
+  },
+  {
+    "id": "sys_torch_off_water",
+    "style": "banner",
+    "duration": 4.0,
+    "text": "水下点不着火把——燃烧需要氧气（燃烧三条件之一）"
+  },
+  {
+    "id": "sys_wet_wood",
+    "style": "banner",
+    "duration": 4.0,
+    "text": "湿木头点不着——温度要达到着火点（燃烧三条件之二）"
+  },
+  {
+    "id": "sys_no_fuel",
+    "style": "banner",
+    "duration": 4.0,
+    "text": "没有燃料一切免谈——燃烧三条件之三：可燃物"
+  },
+  {
+    "id": "sys_filter",
+    "style": "banner",
+    "duration": 4.0,
+    "text": "净水四步：沉淀 → 过滤 → 吸附 → 蒸馏"
+  },
+  {
+    "id": "sys_electrolysis",
+    "style": "banner",
+    "duration": 4.0,
+    "text": "电解水：正氧负氢，体积比 1:2"
+  },
+  {
+    "id": "sys_purity_ok",
+    "style": "banner",
+    "duration": 4.0,
+    "text": "\"噗\"的一声轻响——氢气纯净，可以安全点燃了"
+  },
+  {
+    "id": "sys_carbon",
+    "style": "banner",
+    "duration": 4.0,
+    "text": "活性炭疏松多孔，把 CO 牢牢吸附——吸附是物理变化"
+  },
+  {
+    "id": "sys_spray",
+    "style": "banner",
+    "duration": 4.0,
+    "text": "中和喷雾：酸+碱→盐+水——酸碱中和反应"
+  },
+  {
+    "id": "sys_sleep",
+    "style": "banner",
+    "duration": 4.0,
+    "text": "睡一觉，生命回满——新的一天，矿脉也刷新了"
+  },
+  {
+    "id": "sys_hardwater",
+    "style": "banner",
+    "duration": 4.0,
+    "text": "硬水遇肥皂水不起沫——用肥皂水可以区分硬水和软水"
+  },
+  {
+    "id": "sys_purify",
+    "style": "banner",
+    "duration": 4.0,
+    "text": "粗盐提纯三步：溶解 → 过滤 → 蒸发，泥沙留在滤纸上"
+  },
+  {
+    "id": "sys_craft_hint",
+    "style": "banner",
+    "duration": 4.0,
+    "text": "把材料放进来，试试化学反应"
+  },
+  {
+    "id": "sys_trade_prompt",
+    "style": "banner",
+    "duration": 4.0,
+    "text": "原住民：把不用的装备卖给我吧——按数字键选一件"
+  },
+  {
+    "id": "sys_trade_done",
+    "style": "banner",
+    "duration": 4.0,
+    "text": "原住民收下了装备，塞给你一份干粮——能量 +20"
+  },
+  {
+    "id": "sys_trade_empty",
+    "style": "banner",
+    "duration": 4.0,
+    "text": "原住民摆摆手：这件我不要——他只收人造的装备"
+  },
+  {
+    "id": "tip_mass_conservation",
+    "style": "banner",
+    "duration": 4.0,
+    "text": "反应前后原子种类和数目不变——质量守恒定律"
+  },
+  {
+    "id": "sys_explosion_warn",
+    "style": "warning",
+    "duration": 5.0,
+    "text": "氢气不纯点燃会发生爆炸！点燃前必须验纯——去导师学院问问为什么"
+  },
+  {
+    "id": "sys_death",
+    "style": "warning",
+    "duration": 5.0,
+    "text": "你倒下了……化学不等人。回营地床铺醒来吧"
+  },
+  {
+    "id": "warn_co",
+    "style": "warning",
+    "duration": 5.0,
+    "text": "一氧化碳 CO——无色无味的剧毒气体，煤气中毒的元凶！"
+  },
+  {
+    "id": "warn_acid",
+    "style": "warning",
+    "duration": 5.0,
+    "text": "酸雾来袭！酸性物质有腐蚀性——快用中和喷雾"
+  },
+  {
+    "id": "warn_night",
+    "style": "warning",
+    "duration": 5.0,
+    "text": "天黑了。硫火把是你最好的朋友"
+  },
+  {
+    "id": "warn_cuso4",
+    "style": "warning",
+    "duration": 5.0,
+    "text": "蓝色溶液：硫酸铜，重金属盐有毒——别泡在里面"
+  },
+  {
+    "id": "card_footer",
+    "style": "banner",
+    "duration": 4.0,
+    "text": "反应前后原子种类和数目不变——质量守恒定律"
+  },
+  {
+    "id": "tip_o2",
+    "style": "bubble",
+    "duration": 3.0,
+    "once": true,
+    "text": "氧气 O₂——空气中的氧气约占 21%，动植物呼吸都需要它"
+  },
+  {
+    "id": "tip_h2",
+    "style": "bubble",
+    "duration": 3.0,
+    "once": true,
+    "text": "氢气 H₂——最轻的气体，最清洁的燃料，但点燃前必须验纯！"
+  },
+  {
+    "id": "tip_c",
+    "style": "bubble",
+    "duration": 3.0,
+    "once": true,
+    "text": "碳 C——木头燃烧剩下的木炭，主要成分就是碳"
+  },
+  {
+    "id": "tip_s",
+    "style": "bubble",
+    "duration": 3.0,
+    "once": true,
+    "text": "硫 S——淡黄色粉末，易燃，燃烧时有刺激性气味"
+  },
+  {
+    "id": "tip_co",
+    "style": "bubble",
+    "duration": 3.0,
+    "once": true,
+    "text": "一氧化碳 CO——无色无味的剧毒气体，煤气中毒的元凶！"
+  },
+  {
+    "id": "tip_co2",
+    "style": "bubble",
+    "duration": 3.0,
+    "once": true,
+    "text": "二氧化碳 CO₂——不燃烧也不支持燃烧，能使澄清石灰水变浑浊"
+  },
+  {
+    "id": "tip_h2o",
+    "style": "bubble",
+    "duration": 3.0,
+    "once": true,
+    "text": "天然水含杂质——需净化后才能用于实验"
+  },
+  {
+    "id": "tip_h2o_clean",
+    "style": "bubble",
+    "duration": 3.0,
+    "once": true,
+    "text": "蒸馏水是纯净物——沉淀→过滤→吸附→蒸馏，净化四步"
+  },
+  {
+    "id": "tip_caco3",
+    "style": "bubble",
+    "duration": 3.0,
+    "once": true,
+    "text": "碳酸钙 CaCO₃——石灰石、大理石的主要成分"
+  },
+  {
+    "id": "tip_fe2o3",
+    "style": "bubble",
+    "duration": 3.0,
+    "once": true,
+    "text": "氧化铁 Fe₂O₃——赤铁矿的主要成分，炼铁的原料"
+  },
+  {
+    "id": "tip_cuso4",
+    "style": "bubble",
+    "duration": 3.0,
+    "once": true,
+    "text": "硫酸铜 CuSO₄——蓝色溶液，重金属盐有毒，别碰！"
+  },
+  {
+    "id": "tip_hcl",
+    "style": "bubble",
+    "duration": 3.0,
+    "once": true,
+    "text": "盐酸 HCl——有腐蚀性，但也是除锈和制 CO₂ 的好帮手"
+  },
+  {
+    "id": "tip_naoh",
+    "style": "bubble",
+    "duration": 3.0,
+    "once": true,
+    "text": "氢氧化钠 NaOH——俗称烧碱、火碱、苛性钠，强腐蚀性"
+  },
+  {
+    "id": "tip_caoh2",
+    "style": "bubble",
+    "duration": 3.0,
+    "once": true,
+    "text": "氢氧化钙 Ca(OH)₂——熟石灰，其水溶液就是澄清石灰水"
+  },
+  {
+    "id": "tip_fe",
+    "style": "bubble",
+    "duration": 3.0,
+    "once": true,
+    "text": "铁 Fe——最常见的金属，生锈需要氧气和水同时存在"
+  },
+  {
+    "id": "tip_crude_salt",
+    "style": "bubble",
+    "duration": 3.0,
+    "once": true,
+    "text": "粗盐——主要成分是氯化钠，但混有泥沙等杂质，需提纯后才能用"
+  },
+  {
+    "id": "tip_nacl",
+    "style": "bubble",
+    "duration": 3.0,
+    "once": true,
+    "text": "氯化钠 NaCl——由钠离子和氯离子构成，厨房里的食盐就是它"
+  }
 ]

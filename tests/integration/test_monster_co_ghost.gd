@@ -21,6 +21,7 @@ func before_each() -> void:
 	if gm != null:
 		gm.reset_stats()
 		gm.reset_clock()
+		gm.set_zone("grassland") # 区域隔离：跨测试文件共享 autoload，追踪用例要求非 academy
 	if not ResourceLoader.exists(GHOST_SCENE_PATH):
 		fail_test("尚未实现 %s（FR-G-10 / TP-09）" % GHOST_SCENE_PATH)
 
@@ -86,15 +87,60 @@ func test_contact_damage_8_per_second() -> void:
 	assert_almost_eq(gm.health, before - dps - dps * 0.5, 0.001, "伤害应按时间成比例")
 
 
-# AC2：装备活性炭口罩时伤害为 0。
-func test_carbon_mask_grants_full_immunity() -> void:
+# AC5：装备活性炭口罩（carbon_mask）时接触完全免疫；未装备仍按 8/s（SPEC-02 §4.1）。
+func test_carbon_mask_grants_full_contact_immunity() -> void:
 	var ghost: Node2D = _spawn_ghost(Vector2.ZERO)
 	if ghost == null:
 		return
-	assert_eq(ghost.contact_damage_per_second(["carbon_mask"]), 0.0, "戴口罩时伤害应为 0")
+	var dps: float = float(gm.get_balance("damage.co_ghost_per_second", -1.0))
+	assert_almost_eq(ghost.contact_damage_per_second(["carbon_mask"]), 0.0, 0.001,
+		"装备 carbon_mask 应完全免疫（AC5）")
+	assert_almost_eq(ghost.contact_damage_per_second([]), dps, 0.001,
+		"未装备口罩仍按 balance 掉血")
 	var before: float = gm.health
 	ghost.apply_contact_tick(1.0, ["carbon_mask"])
-	assert_almost_eq(gm.health, before, 0.001, "戴口罩接触不应掉血")
+	assert_almost_eq(gm.health, before, 0.001, "装备口罩接触 1 秒不应掉血")
+	ghost.apply_contact_tick(1.0, [])
+	assert_almost_eq(gm.health, before - dps, 0.001, "卸下口罩后恢复按 8/s 掉血")
+
+
+# B4 / FR-M-01 AC2：玩家在学院内时幽灵不追踪（学院是安全区，取最简实现：静止）。
+func test_no_chase_when_player_in_academy() -> void:
+	var ghost: Node2D = _spawn_ghost(Vector2(100.0, 0.0))
+	if ghost == null:
+		return
+	gm.set_zone("academy")
+	ghost.drift_step(1.0, Vector2.ZERO)
+	assert_almost_eq(ghost.global_position.x, 100.0, 0.001, "学院内幽灵不应向玩家移动")
+	assert_almost_eq(ghost.global_position.y, 0.0, 0.001, "学院内幽灵不应向玩家移动")
+
+
+# B4：离开学院（如矿洞）时恢复正常追踪，不回归 AC1 的现有行为。
+func test_chase_resumes_outside_academy() -> void:
+	var ghost: Node2D = _spawn_ghost(Vector2(100.0, 0.0))
+	if ghost == null:
+		return
+	gm.set_zone("mine")
+	var speed: float = ghost.drift_speed()
+	ghost.drift_step(1.0, Vector2.ZERO)
+	assert_almost_eq(ghost.global_position.x, 100.0 - speed, 0.01, "学院外应正常追踪")
+
+
+# AC3：活性炭砸中即消散（FR-G-10 AC3，2026-08-02 裁决替代原口罩免疫）。
+func test_hit_by_carbon_destroys_ghost() -> void:
+	var ghost: Node2D = _spawn_ghost(Vector2.ZERO)
+	if ghost == null:
+		return
+	if not ghost.has_method("hit_by_carbon"):
+		fail_test("CO 幽灵应有 hit_by_carbon()（FR-G-10 AC3）")
+		return
+	assert_false(ghost.is_destroyed(), "未砸中前不应消散")
+	ghost.hit_by_carbon()
+	assert_true(ghost.is_destroyed(), "活性炭砸中应消散")
+	assert_true(ghost.is_queued_for_deletion(), "消散后应释放节点")
+	# 重复砸不重复结算。
+	ghost.hit_by_carbon()
+	assert_true(ghost.is_destroyed(), "重复砸保持消散态")
 
 
 # 真实物理重叠：玩家站在幽灵碰撞区内，生命随真实帧流逝下降。

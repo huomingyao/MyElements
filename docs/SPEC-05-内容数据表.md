@@ -21,20 +21,24 @@
 | `caco3` | 碳酸钙 | CaCO₃ | 盐 | mine | tip_caco3 | 碳酸钙 CaCO₃——石灰石、大理石的主要成分 |
 | `fe2o3` | 氧化铁 | Fe₂O₃ | 氧化物 | mine | tip_fe2o3 | 氧化铁 Fe₂O₃——赤铁矿的主要成分，炼铁的原料 |
 | `cuso4` | 硫酸铜溶液 | CuSO₄ | 盐 | mine | tip_cuso4 | 硫酸铜 CuSO₄——蓝色溶液，重金属盐有毒，别碰！ |
-| `hcl` | 稀盐酸 | HCl | 酸 | （合成） | tip_hcl | 盐酸 HCl——有腐蚀性，但也是除锈和制 CO₂ 的好帮手 |
-| `naoh` | 氢氧化钠 | NaOH | 碱 | （合成） | tip_naoh | 氢氧化钠 NaOH——俗称烧碱、火碱、苛性钠，强腐蚀性 |
-| `caoh2` | 氢氧化钙 | Ca(OH)₂ | 碱 | （合成） | tip_caoh2 | 氢氧化钙 Ca(OH)₂——熟石灰，其水溶液就是澄清石灰水 |
+| `hcl` | 稀盐酸 | HCl | 酸 | camp（试剂架） | tip_hcl | 盐酸 HCl——有腐蚀性，但也是除锈和制 CO₂ 的好帮手 |
+| `naoh` | 氢氧化钠 | NaOH | 碱 | camp（试剂架） | tip_naoh | 氢氧化钠 NaOH——俗称烧碱、火碱、苛性钠，强腐蚀性 |
+| `caoh2` | 氢氧化钙 | Ca(OH)₂ | 碱 | camp（试剂架） | tip_caoh2 | 氢氧化钙 Ca(OH)₂——熟石灰，其水溶液就是澄清石灰水 |
 | `fe` | 铁 | Fe | 单质 | mine | tip_fe | 铁 Fe——最常见的金属，生锈需要氧气和水同时存在 |
 | `crude_salt` | 粗盐 | NaCl（含杂质） | 盐 | saltlake | tip_crude_salt | 粗盐——主要成分是氯化钠，但混有泥沙等杂质，需提纯后才能用 |
 | `nacl` | 食盐 | NaCl | 盐 | （合成） | tip_nacl | 氯化钠 NaCl——由钠离子和氯离子构成，厨房里的食盐就是它 |
 
 **HUD 计数口径（实现约束）**：表共 17 条。HUD 的「已收集 N/16」以 **`co2` 之外的 16 条**为计数集合——`co2` 在 `substances.json` 中 `zone` 填 `[]` 且额外标记 `"count_in_hud": false`。图鉴仍展示全部 17 张卡。校验器按此规则断言（计数集合恰好 16）。
 
+**试剂三物的来源裁决（2026-08-02，P1）**：`hcl` / `naoh` / `caoh2` 原标注「（合成）」，但 11 条配方中没有任何一条产出它们，而 R6/R7/R8 都拿它们当材料——不补来源这三条配方与「中和喷雾打酸雾怪」的演示路径都不可达。裁决：三者改为营地试剂架可拾取（`zone: ["camp"]`），配方表不变（仍恰好 11 条）。
+
+**道具来源裁决（2026-08-02，P1，D4）**：`carbon_mask`（活性炭口罩）放营地试剂架可拾取（与试剂三物同法，不改 11 条配方）；`oxygen_tank`（氧气瓶）由电解器交互成功时额外灌装 1 个（"氧气可以制备"，按 SPEC-02 §5 字面）；葡萄糖不做来源（食物恢复走篝火进食），来源登记赛后清单。
+
 图鉴每张卡标注「单质/化合物/氧化物/酸/碱/盐」分类标签（第 3、4 单元考点），标签取 `category` 字段。
 
 ---
 
-## 2. 反应配方表（11 条 → recipes.json）
+## 2. 反应配方表（12 条 → recipes.json）
 
 | # | recipe id | 方程式 | 材料 → 产物 | tool / condition | 游戏内用途 | card_body | 考点 |
 |---|---|---|---|---|---|---|---|
@@ -49,8 +53,9 @@
 | R9 | `r_wet_copper` | Fe+CuSO₄=Cu+FeSO₄ | 铁+硫酸铜溶液 → 铜 | bench / none | 湿法炼铜 | 铁表面析出红色铜，溶液由蓝色变浅绿色——铁比铜活泼 | 金属活动性、置换反应 |
 | R10 | `r_extinguisher` | NaHCO₃+HCl=NaCl+H₂O+CO₂↑ | 小苏打+盐酸 → 灭火器 | bench / none | 灭营地火灾剧情 | 碳酸氢钠与酸反应快速产生二氧化碳，隔绝氧气灭火 | 灭火原理 |
 | R11 | `r_salt_purify` | （物理过程，无化学方程式） | 粗盐 → 食盐 NaCl | bench / three_step（`is_physical: true`） | 获得 NaCl，可小量回能量 | 粗盐提纯三步：溶解（粗盐消失，分子均匀分散）→ 过滤（泥沙留在滤纸上）→ 蒸发（水分蒸干，析出白色晶体）。注意：这是物理变化，没有生成新物质 | 粗盐提纯、溶解与过滤、物理变化 |
+| R12 | `r_carbon_activate` | （物理过程，无化学方程式） | 碳 → 活性炭 | alcohol_lamp / heat（`is_physical: true`） | 砸 CO 幽灵的武器 | 木炭高温活化后变得疏松多孔，表面积剧增，吸附能力大大增强——活化是物理变化 | 活性炭的吸附性、物理变化 |
 
-**卡片标题（card_title）**：R1 硫的燃烧｜R2 碳的充分燃烧｜R3 不充分燃烧的代价｜R4 氢气的燃烧｜R5 电解水｜R6 中和反应｜R7 实验室制二氧化碳｜R8 检验二氧化碳｜R9 湿法炼铜｜R10 灭火器原理｜R11 粗盐提纯
+**卡片标题（card_title）**：R1 硫的燃烧｜R2 碳的充分燃烧｜R3 不充分燃烧的代价｜R4 氢气的燃烧｜R5 电解水｜R6 中和反应｜R7 实验室制二氧化碳｜R8 检验二氧化碳｜R9 湿法炼铜｜R10 灭火器原理｜R11 粗盐提纯｜R12 活性炭的活化
 
 **现实应用（card_application）**：
 - R1 硫火把：夜晚照明与驱虫
@@ -64,6 +69,7 @@
 - R9 古代湿法炼铜——比火法更早的冶金智慧
 - R10 干粉灭火器就是这个原理
 - R11 海水晒盐后的粗盐提纯，食盐从这里来
+- R12 防毒面具里的活性炭层，吸附毒气分子保护呼吸
 
 **失败反馈文案**（→ `fail_messages.json`，不匹配时按 reason 轮换）：
 
@@ -107,13 +113,19 @@
 | `sys_filter` | 净水四步：沉淀 → 过滤 → 吸附 → 蒸馏 |
 | `sys_electrolysis` | 电解水：正氧负氢，体积比 1:2 |
 | `sys_purity_ok` | "噗"的一声轻响——氢气纯净，可以安全点燃了 |
-| `sys_mask` | 活性炭口罩：活性炭的吸附性——防毒面具的原理 |
+| `sys_carbon` | 活性炭疏松多孔，把 CO 牢牢吸附——吸附是物理变化 |
 | `sys_spray` | 中和喷雾：酸+碱→盐+水——酸碱中和反应 |
 | `sys_sleep` | 睡一觉，生命回满——新的一天，矿脉也刷新了 |
 | `sys_hardwater` | 硬水遇肥皂水不起沫——用肥皂水可以区分硬水和软水 |
 | `sys_purify` | 粗盐提纯三步：溶解 → 过滤 → 蒸发，泥沙留在滤纸上 |
 | `sys_craft_hint` | 把材料放进来，试试化学反应 |
+| `sys_trade_prompt` | 原住民：把不用的装备卖给我吧——按数字键选一件 |
+| `sys_trade_done` | 原住民收下了装备，塞给你一份干粮——能量 +20 |
+| `sys_trade_empty` | 原住民摆摆手：这件我不要——他只收人造的装备 |
 | `tip_mass_conservation` | 反应前后原子种类和数目不变——质量守恒定律 |
+| `sys_oxygen_tutorial` | 氧气在消耗——回到开阔地带，或制取氧气 |
+
+> `sys_oxygen_tutorial`（2026-08-02 补，FR-U-02 AC2）：`once: true`，氧气首次跌破 `stats.tutorial_oxygen_hint_at`（70）时由 HUD 触发一次；低氧闪烁阈值（30）维持不变，`sys_oxygen_low` 仍为低氧反复警示。
 
 ### 3.3 警示（style: warning，5 秒）
 
@@ -136,7 +148,7 @@
 
 `tip_o2`…`tip_nacl` 共 17 条，文案见 §1 表格最后一列，逐条誊入 `tips.json`。
 
-**字幕总数**：7（区域）+ 16（机制）+ 6（警示）+ 1（卡片底行）+ 17（物质）= **47 条**。原草案说"约 30 条"，实际按本表落地为 47 条；校验器只断言"本表列出的 id 全部存在"，不断言总数。
+**字幕总数**：7（区域）+ 20（机制）+ 6（警示）+ 1（卡片底行）+ 17（物质）= **51 条**（2026-08-02：删 `sys_mask`，增 `sys_carbon`、交易三条与 `sys_oxygen_tutorial`）。校验器只断言"本表列出的 id 全部存在"，不断言总数。
 
 ---
 
@@ -351,12 +363,16 @@
 |---|---|---|---|---|
 | `sulfur_torch` | 硫火把 | equip | light | `warn_night` |
 | `neutral_spray` | 中和喷雾 | consume | kill_acid | `sys_spray` |
-| `carbon_mask` | 活性炭口罩 | equip | immune_co | `sys_mask` |
+| `activated_carbon` | 活性炭 | consume | kill_co | `sys_carbon` |
+| `carbon_mask` | 活性炭口罩 | equip | immune_co | `sys_carbon` |
 | `extinguisher` | 灭火器 | consume | extinguish | — |
 | `oxygen_tank` | 氧气瓶 | consume | restore_oxygen | — |
-| `glucose` | 葡萄糖 | consume | restore_energy | `sys_energy_food` |
 | `soap_water` | 肥皂水 | consume | test_hardwater | `sys_hardwater` |
 | `stick` | 木棒 | material | none | — |
+| `cu` | 铜 | material | none | — |
+| `nahco3` | 碳酸氢钠 | material | none | — |
+
+> 2026-08-02 同步：`carbon_mask` 使用字幕由 `sys_mask`（已删）改为复用 `sys_carbon`（同为吸附原理）；补 `activated_carbon`/`cu`/`nahco3` 三行（items.json 实有）；`glucose` 按 D4 裁决移出 MVP（不做来源，登记赛后清单）。
 
 ---
 
@@ -388,5 +404,12 @@
 | `menu_map` | 世界地图 |
 | `chat_send` | 发送 |
 | `chat_close` | 关闭 |
+| `craft_title` | 合成台 |
+| `craft_tool_portable` | 便携格 |
+| `craft_tool_lamp` | 酒精灯 |
+| `craft_tool_bench` | 实验台 |
+| `craft_cancel` | 取消 |
+| `craft_slot_empty` | （空） |
+| `inventory_title` | 背包 |
 
 约束：UI 短语同样不许硬编码在场景/脚本里（NFR-04）。

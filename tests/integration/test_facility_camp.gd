@@ -102,6 +102,8 @@ func test_electrolyzer_gives_h2_o2_at_one_to_two_ratio() -> void:
 	assert_eq(player.inventory.count_of("h2o_clean"), 0, "电解后纯净水应被消耗")
 	assert_eq(player.inventory.count_of("o2"), 1, "氧气应给 1 份")
 	assert_eq(player.inventory.count_of("h2"), 2, "氢气应给 2 份（正氧负氢，体积比 1:2）")
+	assert_eq(player.inventory.count_of("oxygen_tank"), 1,
+		"电解成功应额外灌装 1 个氧气瓶（D4 / SPEC-02 §5）")
 	assert_true(tip.is_shown("sys_electrolysis"), "电解后应触发 sys_electrolysis 字幕")
 
 
@@ -114,6 +116,7 @@ func test_electrolyzer_without_clean_water_gives_hint_and_no_gas() -> void:
 	electrolyzer.interact(player)
 	assert_eq(player.inventory.count_of("h2"), 0, "没有纯净水时不许产氢气")
 	assert_eq(player.inventory.count_of("o2"), 0, "没有纯净水时不许产氧气")
+	assert_eq(player.inventory.count_of("oxygen_tank"), 0, "没有纯净水时不许灌装氧气瓶")
 	assert_true(tip.is_shown("sys_filter"), "没有纯净水时应提示先过滤（sys_filter）")
 
 

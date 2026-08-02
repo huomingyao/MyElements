@@ -30,6 +30,10 @@ const FLAG_PURITY: String = "purity_check_unlocked"
 # SPEC-03 §4 规则 3 的 fail_reason 值（契约字符串，非文案）。
 const REASON_NEEDS_PURITY: String = "needs_purity_check"
 
+# 氢气提问判定的关键词来源（qa_fallback.json 行 id；关键词本身是数据表内容）。
+const QA_TABLE: String = "qa_fallback.json"
+const QA_HYDROGEN_ROW_ID: String = "qa_h2_explosion"
+
 # ==== 逻辑区 ====
 
 # 点燃入口（FR-G-08）：材料来自合成界面。未验纯命中 R4 时触发爆炸事件；
@@ -83,6 +87,29 @@ func unlock_purity_check() -> void:
 		push_warning("[h2] GameManager 缺失，验纯解锁被忽略")
 		return
 	gm.set_flag(FLAG_PURITY, true)
+
+
+# 问题是否涉及氢气爆炸（FR-G-09 AC1 的触发判定）。
+# 关键词读 qa_fallback.json 的 qa_h2_explosion 行——内容归数据表，代码零中文关键词（NFR-04）。
+func question_mentions_hydrogen(question: String) -> bool:
+	if question.is_empty():
+		return false
+	for keyword: Variant in _hydrogen_keywords():
+		var word: String = str(keyword)
+		if not word.is_empty() and question.contains(word):
+			return true
+	return false
+
+
+func _hydrogen_keywords() -> Array:
+	var rows: Array = DataLoader.load_table(QA_TABLE, TYPE_ARRAY, [])
+	for row: Variant in rows:
+		if typeof(row) != TYPE_DICTIONARY:
+			continue
+		if str((row as Dictionary).get("id", "")) == QA_HYDROGEN_ROW_ID:
+			return (row as Dictionary).get("keywords", [])
+	push_warning("[h2] qa_fallback.json 缺 %s 行（氢气提问判定恒否）" % QA_HYDROGEN_ROW_ID)
+	return []
 
 
 # 爆炸（FR-G-08 AC2/AC3）：伤害走 balance，字幕走 tips，标记走 GameManager。

@@ -93,7 +93,7 @@ const TIP_STYLES: Array[String] = ["bubble", "banner", "warning"]
 const ROUTE_CLASSES: Array[String] = ["chemistry", "dispatch", "planning", "thinking"]
 const ITEM_TYPES: Array[String] = ["equip", "consume", "material"]
 const ITEM_EFFECTS: Array[String] = [
-	"light", "immune_co", "kill_acid", "extinguish",
+	"light", "kill_co", "kill_acid", "extinguish", "immune_co",
 	"restore_oxygen", "restore_energy", "test_hardwater", "none",
 ]
 
@@ -144,7 +144,7 @@ const ASSET_EXTENSIONS: Array[String] = ["png", "svg", "webp"]
 # ---- 条数约束（第 7 类检查）----
 const COUNT_SUBSTANCES: int = 17
 const COUNT_SUBSTANCES_IN_HUD: int = 16
-const COUNT_RECIPES: int = 11
+const COUNT_RECIPES: int = 12
 const COUNT_MENTORS: int = 4
 const COUNT_WORLDMAP: int = 13
 const COUNT_WORLDMAP_UNLOCKED: int = 5
@@ -182,6 +182,8 @@ const UI_STRING_KEYS: Array[String] = [
 	"collected_counter", "death_title", "config_note",
 	"hud_day", "hud_night", "pause_title", "pause_continue", "pause_to_menu",
 	"menu_map", "chat_send", "chat_close",
+	"craft_title", "craft_tool_portable", "craft_tool_lamp", "craft_tool_bench",
+	"craft_cancel", "craft_slot_empty", "inventory_title",
 ]
 const ALLOWED_PLACEHOLDER: String = "{n}"
 const PLACEHOLDER_PATTERN: String = "\\{[^}]*\\}"

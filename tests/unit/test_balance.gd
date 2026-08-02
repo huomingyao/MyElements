@@ -38,7 +38,7 @@ const REQUIRED_KEYS: Dictionary = {
 	"monsters.acid_mist_night_count_min": 2,
 	"monsters.acid_mist_night_count_max": 3,
 	"items.oxygen_tank_restore": 50.0,
-	"items.glucose_restore": 20.0,
+	"items.trade_energy_restore": 20.0,
 	"items.campfire_meal_restore": 40.0,
 	"inventory.hotbar_slots": 8,
 	"inventory.stack_limit": 99,
