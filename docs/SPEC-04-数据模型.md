@@ -272,6 +272,7 @@
     "unlocked": true,
     "brief": "出生地。空气中氮气约 78%、氧气约 21%。",
     "teaser": "",
+    "map_image": "res://assets/art/map_zones/zone_grassland.png",
     "hotspot": { "x": 180, "y": 210, "w": 64, "h": 48 }
   },
   {
@@ -292,6 +293,7 @@
 | `unlocked` | bool | ✅ | 5 true / 8 false |
 | `brief` | String | 解锁必填 | 点击显示的区域简介 |
 | `teaser` | String | 未解锁必填 | 预告语（[SPEC-05 §7](SPEC-05-内容数据表.md)） |
+| `map_image` | String | 选填 | 热区场景图路径（`res://assets/art/map_zones/`）；仅已解锁区域使用，缺省或无文件时保持配色占位 |
 | `hotspot` | Dictionary | ✅ | 地图页热区矩形（视口 640×360 坐标系） |
 
 校验规则：13 条；`unlocked==true` 恰好 5 条；解锁项 `brief` 非空、未解锁项 `teaser` 非空；热区不越出 640×360。

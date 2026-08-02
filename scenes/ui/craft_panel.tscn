@@ -1,76 +1,137 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scenes/ui/craft_panel.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/art/ui/craft_bg.png" id="2"]
 
 [node name="CraftPanel" type="Control"]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-mouse_filter = 1
+mouse_filter = 2
 script = ExtResource("1")
 
-[node name="Dim" type="ColorRect" parent="."]
+[node name="Panel" type="Control" parent="."]
+anchors_preset = 0
+anchor_left = 0.56
+anchor_top = 0.0555
+anchor_right = 0.901
+anchor_bottom = 0.9445
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Bg" type="TextureRect" parent="Panel"]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 mouse_filter = 2
-color = Color(0, 0, 0, 0.5)
+expand_mode = 1
+texture = ExtResource("2")
 
-[node name="Panel" type="PanelContainer" parent="."]
+[node name="TitleLabel" type="Label" parent="Panel"]
+unique_name_in_owner = true
 anchors_preset = 0
-anchor_left = 0.12
-anchor_top = 0.2
-anchor_right = 0.88
-anchor_bottom = 0.8
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="VBox" type="VBoxContainer" parent="Panel"]
-
-[node name="TitleLabel" type="Label" parent="Panel/VBox"]
-unique_name_in_owner = true
+anchor_left = 0.085
+anchor_top = 0.016
+anchor_right = 0.915
+anchor_bottom = 0.109
 horizontal_alignment = 1
+vertical_alignment = 1
 
-[node name="Slots" type="HBoxContainer" parent="Panel/VBox"]
+[node name="Slots" type="HBoxContainer" parent="Panel"]
+anchors_preset = 0
+anchor_left = 0.11
+anchor_top = 0.112
+anchor_right = 0.872
+anchor_bottom = 0.249
 alignment = 1
+theme_override_constants/separation = 4
 
-[node name="Slot0" type="Button" parent="Panel/VBox/Slots"]
+[node name="Slot0" type="Button" parent="Panel/Slots"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(80, 32)
+custom_minimum_size = Vector2(48, 36)
+size_flags_horizontal = 3
+size_flags_vertical = 3
+flat = true
 
-[node name="Slot1" type="Button" parent="Panel/VBox/Slots"]
+[node name="Slot1" type="Button" parent="Panel/Slots"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(80, 32)
+custom_minimum_size = Vector2(48, 36)
+size_flags_horizontal = 3
+size_flags_vertical = 3
+flat = true
 
-[node name="Slot2" type="Button" parent="Panel/VBox/Slots"]
+[node name="Slot2" type="Button" parent="Panel/Slots"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(80, 32)
+custom_minimum_size = Vector2(48, 36)
+size_flags_horizontal = 3
+size_flags_vertical = 3
+flat = true
 
-[node name="Tools" type="HBoxContainer" parent="Panel/VBox"]
+[node name="Tools" type="HBoxContainer" parent="Panel"]
+anchors_preset = 0
+anchor_left = 0.11
+anchor_top = 0.268
+anchor_right = 0.872
+anchor_bottom = 0.403
 alignment = 1
+theme_override_constants/separation = 4
 
-[node name="ToolPortable" type="Button" parent="Panel/VBox/Tools"]
+[node name="ToolPortable" type="Button" parent="Panel/Tools"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(48, 36)
+size_flags_horizontal = 3
+size_flags_vertical = 3
+flat = true
 
-[node name="ToolLamp" type="Button" parent="Panel/VBox/Tools"]
+[node name="ToolLamp" type="Button" parent="Panel/Tools"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(48, 36)
+size_flags_horizontal = 3
+size_flags_vertical = 3
+flat = true
 
-[node name="ToolBench" type="Button" parent="Panel/VBox/Tools"]
+[node name="ToolBench" type="Button" parent="Panel/Tools"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(48, 36)
+size_flags_horizontal = 3
+size_flags_vertical = 3
+flat = true
 
-[node name="Actions" type="HBoxContainer" parent="Panel/VBox"]
+[node name="Actions" type="HBoxContainer" parent="Panel"]
+anchors_preset = 0
+anchor_left = 0.172
+anchor_top = 0.745
+anchor_right = 0.808
+anchor_bottom = 0.929
 alignment = 1
+theme_override_constants/separation = 2
 
-[node name="ReactButton" type="Button" parent="Panel/VBox/Actions"]
+[node name="ReactButton" type="Button" parent="Panel/Actions"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(30, 28)
+size_flags_horizontal = 3
+size_flags_vertical = 3
+flat = true
 
-[node name="IgniteButton" type="Button" parent="Panel/VBox/Actions"]
+[node name="IgniteButton" type="Button" parent="Panel/Actions"]
 unique_name_in_owner = true
 visible = false
+custom_minimum_size = Vector2(30, 28)
+size_flags_horizontal = 3
+size_flags_vertical = 3
+flat = true
 
-[node name="PurityButton" type="Button" parent="Panel/VBox/Actions"]
+[node name="PurityButton" type="Button" parent="Panel/Actions"]
 unique_name_in_owner = true
 visible = false
+custom_minimum_size = Vector2(30, 28)
+size_flags_horizontal = 3
+size_flags_vertical = 3
+flat = true
 
-[node name="CancelButton" type="Button" parent="Panel/VBox/Actions"]
+[node name="CancelButton" type="Button" parent="Panel/Actions"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(30, 28)
+size_flags_horizontal = 3
+size_flags_vertical = 3
+flat = true

@@ -5,12 +5,10 @@ extends Control
 
 # ==== 常量区 ====
 
-# 世界/图鉴场景路径由 SPEC-03 §8 钉死与 TP-12/TP-16 交付约定。
-# D2（2026-08-02）：学院门不再进独立学院场景，而是加载世界场景 + 一次性出生点覆盖。
+# 世界/图鉴/导师室场景路径：世界与图鉴由 SPEC-03 §8 钉死；导师室为独立页（2026-08-02 取代 D2 出生点覆盖方案）。
 const WORLD_SCENE_PATH: String = "res://scenes/main/world.tscn"
 const CODEX_SCENE_PATH: String = "res://scenes/ui/codex_panel.tscn"
-const SPAWN_OVERRIDE_META: String = "world_spawn_override"
-const SPAWN_ACADEMY_GATE: String = "academy_gate"
+const MENTOR_ROOM_SCENE_PATH: String = "res://scenes/mentor/mentor_room.tscn"
 
 const UI_MENU_START: String = "menu_start"
 const UI_MENU_ACADEMY: String = "menu_academy"
@@ -50,10 +48,9 @@ func start_game() -> void:
 	_navigate(WORLD_SCENE_PATH)
 
 
-# D2：学院门加载世界场景，出生点改为学院门口（world._ready 消费该元数据，一次性）。
+# 导师学院门：整页进入导师室（独立场景，Esc/返回 回主菜单）。
 func open_academy() -> void:
-	get_tree().root.set_meta(SPAWN_OVERRIDE_META, SPAWN_ACADEMY_GATE)
-	_navigate(WORLD_SCENE_PATH)
+	_navigate(MENTOR_ROOM_SCENE_PATH)
 
 
 func open_codex() -> void:

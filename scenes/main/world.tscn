@@ -1,4 +1,4 @@
-[gd_scene load_steps=32 format=3]
+[gd_scene load_steps=34 format=3]
 
 [ext_resource type="Script" path="res://scenes/main/world.gd" id="1_world"]
 [ext_resource type="Script" path="res://scenes/main/zone_trigger.gd" id="2_zone"]
@@ -14,7 +14,6 @@
 [ext_resource type="PackedScene" path="res://scenes/gameplay/facility_campfire.tscn" id="17_fire"]
 [ext_resource type="PackedScene" path="res://scenes/gameplay/facility_bed.tscn" id="18_bed"]
 [ext_resource type="PackedScene" path="res://scenes/gameplay/native_trader.tscn" id="30_trader"]
-[ext_resource type="PackedScene" path="res://scenes/mentor/academy.tscn" id="19_academy"]
 [ext_resource type="PackedScene" path="res://scenes/gameplay/explosion.tscn" id="20_boom"]
 [ext_resource type="PackedScene" path="res://scenes/main/hud.tscn" id="21_hud"]
 [ext_resource type="PackedScene" path="res://scenes/ui/tip_layer.tscn" id="22_tip"]
@@ -27,6 +26,8 @@
 [ext_resource type="PackedScene" path="res://scenes/main/pause_menu.tscn" id="29_pause"]
 [ext_resource type="PackedScene" path="res://scenes/main/facility_signpost.tscn" id="31_signpost"]
 [ext_resource type="PackedScene" path="res://scenes/gameplay/cuso4_pool.tscn" id="32_cuso4pool"]
+[ext_resource type="PackedScene" path="res://scenes/gameplay/black_hole.tscn" id="33_hole"]
+[ext_resource type="PackedScene" path="res://scenes/mentor/mentor_room.tscn" id="34_mentorroom"]
 
 [sub_resource type="RectangleShape2D" id="zone_saltlake"]
 size = Vector2(1000, 120)
@@ -135,8 +136,35 @@ script = ExtResource("3_spawner")
 [node name="Cuso4Pool" parent="." instance=ExtResource("32_cuso4pool")]
 position = Vector2(1720, -20)
 
-[node name="AcademyBuilding" parent="." instance=ExtResource("19_academy")]
-position = Vector2(-110, -40)
+[node name="BlackHoles" type="Node2D" parent="."]
+
+[node name="HoleSaltlakeGrassland" parent="BlackHoles" instance=ExtResource("33_hole")]
+position = Vector2(-700, 0)
+west_target = Vector2(-770, 0)
+east_target = Vector2(-630, 0)
+west_zone = "saltlake"
+east_zone = "grassland"
+
+[node name="HoleGrasslandCampWest" parent="BlackHoles" instance=ExtResource("33_hole")]
+position = Vector2(-150, 0)
+west_target = Vector2(-210, 0)
+east_target = Vector2(640, 0)
+west_zone = "grassland"
+east_zone = "camp"
+
+[node name="HoleGrasslandCampEast" parent="BlackHoles" instance=ExtResource("33_hole")]
+position = Vector2(600, 0)
+west_target = Vector2(-210, 0)
+east_target = Vector2(640, 0)
+west_zone = "grassland"
+east_zone = "camp"
+
+[node name="HoleCampMine" parent="BlackHoles" instance=ExtResource("33_hole")]
+position = Vector2(1375, 0)
+west_target = Vector2(1310, 0)
+east_target = Vector2(1440, 0)
+west_zone = "camp"
+east_zone = "mine"
 
 [node name="Explosion" parent="." instance=ExtResource("20_boom")]
 
@@ -161,13 +189,15 @@ color = Color(0, 0, 0, 1)
 
 [node name="TipLayer" parent="UILayer" instance=ExtResource("22_tip")]
 
-[node name="CraftPanel" parent="UILayer" instance=ExtResource("23_craft")]
-
 [node name="CardPopup" parent="UILayer" instance=ExtResource("24_card")]
 
 [node name="InventoryPanel" parent="UILayer" instance=ExtResource("25_inv")]
 
+[node name="CraftPanel" parent="UILayer" instance=ExtResource("23_craft")]
+
 [node name="WorldMapPanel" parent="UILayer" instance=ExtResource("26_map")]
+
+[node name="MentorRoom" parent="UILayer" instance=ExtResource("34_mentorroom")]
 
 [node name="CodexPanel" parent="UILayer" instance=ExtResource("27_codex")]
 

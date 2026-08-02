@@ -3,8 +3,8 @@
 > **本文件是续作入口。** 新会话开工顺序：读本文件 → `docs/SPEC.md`（Checklist 与索引）→ 任务涉及的分册。
 > 状态口径：✅ = 实现 + 自动化测试全绿；⚠️ = 实现但有人工/实机验证缺口；❌ = 未做。
 
-- 最近更新：2026-08-02（FR-U-06 面板自适应布局落地，IT-U06 新增 6 项）
-- 测试基线：`./run_tests.sh` **666/666 全绿**（2026-08-02 复验，含 IT-U06 新增 6 项）；`./validate_data.sh` **DATA OK**（仅 P4 美术未交付的路径警告）
+- 最近更新：2026-08-02（主菜单按钮组下移至中间偏下，MenuBox 垂直锚点 0.5→0.62，FR-U-06 AC2/IT-U06 口径同步）
+- 测试基线：`./run_tests.sh` **672/672 全绿**（2026-08-02 复验，含 IT-U06 主菜单中间偏下断言更新）；`./validate_data.sh` **DATA OK**（仅 P4 美术未交付的路径警告）
 - 冒烟基线：主场景与 `world.tscn` headless 各跑 120/180 帧零 script error（2026-08-02 复验）
 - 本机约束：**godot_mcp 未注册**（可见行为无法实机截图验证）；**superpowers/godot-prompter 技能未注册**（按同等纪律手动执行 SSD+TDD）
 
@@ -42,6 +42,9 @@
 | Wave 2 收口（三代理并行） | W1 代码集成（爆炸震屏统一 B-034）、W2 nahco3 产出途径（B-031）、W3 文档同步（SPEC/SPEC-02/03/05、BUGS、WORKLOG、PLAN、plan/ 废弃标注） | W3：validate_data DATA OK + test_validator 全绿 |
 | 审计修复批次（包A/B/C/D） | A1..A7 七项 spec 偏差修复 + spec 九册口径回写 + FR-G-16 入册 | 650/650 全绿、DATA OK |
 | 面板自适应（FR-U-06） | 合成/背包/卡片模态面板由固定像素改为锚点比例铺开（宽 76%/70%/80%、高 60%/70%/70%）并居中；主菜单/暂停菜单按钮组中心锚点；死亡画面文案垂直中心锚点（IT-U06 6 项）；`project.godot` 显式补 `stretch/aspect=keep`，并恢复会话中被 Godot 进程改写丢失的 640×360 视口行（FR-C-01 AC1） | IT-U06 6 项全绿 + 全量回归 |
+| 背包/合成面板宝箱美术 | `panels.png` 切分为 `inventory_bg.png`/`craft_bg.png`（`assets/art/ui/`）；两面板改 Control+Bg(TextureRect) 底图、控件锚点对准底图格子、按钮 flat；面板比例按底图调整为背包 51%×83%、合成 34%×89%（FR-U-06 AC1 / IT-U06 / SPEC-03 §9 同步） | 见下方验证结果 |
+| 背包内合成快捷入口（FR-G-05 AC4） | 新增输入动作 `craft`（X 键）；`inventory_panel` 新增 `craft_requested` 信号（仅背包打开时触发）+ `%HintLabel` 底部提示（ui_strings `inventory_craft_hint`）；world 接线 `craft_requested → ui_manager.open("craft")` 互斥切换；合成台 E 入口保留 | IT-U05 新增 2 项，674/674 全绿 + DATA OK |
+| 背包+合成台同屏并列与拖拽合成（FR-G-05 AC5） | ui_manager 改 `_open_order` 栈 + `register_panel` 增 `group` 可选参（SPEC-03 §8 修订：默认互斥、同组可并列，Esc 逐层关最上）；背包靠左/合成台靠右互不遮挡（FR-U-06 AC1 口径）；两面板根 `mouse_filter=IGNORE` + craft 可见区域 `set_drag_forwarding` 转发拖放——背包材料直接拖入合成界面；合成台 E 交互同时打开背包+合成台；X 键 toggle 合成台 | IT-U05/仲裁/U06/test_world 新增与改写 9 项，686/687（唯一红为并行会话 MentorRoom 改造中的 x=300 学院区域断言）+ DATA OK |
 
 文档状态：SPEC-03 §9 变更记录已同步至 2026-08-02 全部批次；SPEC.md v1.2；SPEC-01 FR-G-10 增 AC5、FR-C-08 AC1 记 D2；SPEC-04 §10 effect 枚举增 immune_co；SPEC-05 §1/§3.2/§8、SPEC-02 §4.4/§5、SPEC-08 §6、SPEC-09 §3.1 已同步。
 

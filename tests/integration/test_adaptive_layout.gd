@@ -24,16 +24,35 @@ func _assert_centered_proportional(panel: Control, w_frac: float, h_frac: float)
 	assert_almost_eq(r.position.y + r.size.y / 2.0, VIEWPORT_SIZE.y / 2.0, 2.0, "面板应垂直居中")
 
 
-# AC1：合成面板按视口比例铺开（宽 76%、高 60%）并居中。
+# AC1：合成面板靠右停靠（宽 34.1%、高 88.9%），垂直居中，为背包留出左侧空间。
 func test_craft_panel_is_proportional_and_centered() -> void:
 	var panel: Control = await _mount("res://scenes/ui/craft_panel.tscn", "Panel")
-	_assert_centered_proportional(panel, 0.76, 0.60)
+	var r: Rect2 = panel.get_rect()
+	assert_almost_eq(r.size.x, VIEWPORT_SIZE.x * 0.341, 2.0, "合成台宽度应为视口 34.1%")
+	assert_almost_eq(r.size.y, VIEWPORT_SIZE.y * 0.889, 2.0, "合成台高度应为视口 88.9%")
+	assert_almost_eq(r.position.y + r.size.y / 2.0, VIEWPORT_SIZE.y / 2.0, 2.0, "合成台应垂直居中")
+	assert_almost_eq(r.position.x + r.size.x, VIEWPORT_SIZE.x * 0.901, 2.0, "合成台右缘应靠右停靠")
 
 
-# AC1：背包面板按视口比例铺开（宽 70%、高 70%）并居中。
+# AC1：背包面板靠左停靠（宽 51.5%、高 83.3%），垂直居中。
 func test_inventory_panel_is_proportional_and_centered() -> void:
 	var panel: Control = await _mount("res://scenes/ui/inventory_panel.tscn", "Panel")
-	_assert_centered_proportional(panel, 0.70, 0.70)
+	var r: Rect2 = panel.get_rect()
+	assert_almost_eq(r.size.x, VIEWPORT_SIZE.x * 0.515, 2.0, "背包宽度应为视口 51.5%")
+	assert_almost_eq(r.size.y, VIEWPORT_SIZE.y * 0.833, 2.0, "背包高度应为视口 83.3%")
+	assert_almost_eq(r.position.y + r.size.y / 2.0, VIEWPORT_SIZE.y / 2.0, 2.0, "背包应垂直居中")
+	assert_almost_eq(r.position.x, VIEWPORT_SIZE.x * 0.02, 2.0, "背包左缘应靠左停靠")
+
+
+# AC1/FR-G-05 AC5：背包右缘在合成台左缘左侧——同屏并列互不遮挡。
+func test_inventory_and_craft_do_not_overlap() -> void:
+	var inv: Control = await _mount("res://scenes/ui/inventory_panel.tscn", "Panel")
+	var inv_rect: Rect2 = inv.get_rect()
+	inv.get_parent().remove_child(inv)
+	inv.queue_free()
+	var craft: Control = await _mount("res://scenes/ui/craft_panel.tscn", "Panel")
+	var craft_rect: Rect2 = craft.get_rect()
+	assert_true(inv_rect.end.x <= craft_rect.position.x, "背包右缘不应越过合成台左缘")
 
 
 # AC1：知识卡片弹窗按视口比例铺开（宽 80%、高 70%）并居中。
@@ -42,12 +61,12 @@ func test_card_popup_is_proportional_and_centered() -> void:
 	_assert_centered_proportional(panel, 0.80, 0.70)
 
 
-# AC2：主菜单按钮组相对视口居中，不依赖 640×360 固定偏移。
+# AC2：主菜单按钮组水平居中、垂直位于视口 62%（中间偏下），不依赖 640×360 固定偏移。
 func test_main_menu_box_is_centered() -> void:
 	var box: Control = await _mount("res://scenes/main/main_menu.tscn", "MenuBox")
 	var r: Rect2 = box.get_rect()
 	assert_almost_eq(r.position.x + r.size.x / 2.0, VIEWPORT_SIZE.x / 2.0, 2.0, "主菜单应水平居中")
-	assert_almost_eq(r.position.y + r.size.y / 2.0, VIEWPORT_SIZE.y / 2.0, 2.0, "主菜单应垂直居中")
+	assert_almost_eq(r.position.y + r.size.y / 2.0, VIEWPORT_SIZE.y * 0.62, 2.0, "主菜单垂直中心应在视口 62%（中间偏下）")
 
 
 # AC2：暂停菜单按钮组相对视口居中。

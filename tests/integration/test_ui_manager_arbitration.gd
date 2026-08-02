@@ -201,6 +201,51 @@ func test_esc_swallowed_while_death_screen_open() -> void:
 	assert_false(_pause.visible, "死亡画面打开时 Esc 不许叠开暂停菜单")
 
 
+# 同组共存（FR-G-05 AC5，SPEC-03 §8）：同组面板打开不关当前，同屏并列；
+# 最上面板为激活面板，任一屏蔽类面板打开即屏蔽输入。
+func test_same_group_panels_coexist() -> void:
+	var craft: FakePanel = FakePanel.new()
+	add_child_autofree(craft)
+	_manager.register_panel("inventory", _panel, true, "crafting")
+	_manager.register_panel("craft", craft, true, "crafting")
+	_manager.open("inventory")
+	_manager.open("craft")
+	assert_true((_panel as FakePanel).is_open(), "同组打开合成台时背包应保持打开")
+	assert_true(craft.is_open(), "合成台应打开")
+	assert_eq(str(_manager.active_panel()), "craft", "最上面板为合成台")
+	assert_true(_manager.input_blocked(), "屏蔽类面板打开时输入被屏蔽")
+
+
+# 同组共存下的 Esc（FR-G-05 AC5）：逐层关闭——先关最上的合成台，背包仍在；再按才关背包。
+func test_esc_closes_group_panels_one_by_one() -> void:
+	var craft: FakePanel = FakePanel.new()
+	add_child_autofree(craft)
+	_manager.register_panel("inventory", _panel, true, "crafting")
+	_manager.register_panel("craft", craft, true, "crafting")
+	_manager.open("inventory")
+	_manager.open("craft")
+	await _send(ACTION_PAUSE)
+	assert_false(craft.is_open(), "第一次 Esc 应先关最上的合成台")
+	assert_true((_panel as FakePanel).is_open(), "背包应保持打开")
+	assert_eq(str(_manager.active_panel()), "inventory", "背包成为最上面板")
+	await _send(ACTION_PAUSE)
+	assert_false((_panel as FakePanel).is_open(), "第二次 Esc 才关背包")
+	assert_false(_pause.visible, "面板未清空前 Esc 不叠开暂停菜单")
+
+
+# 跨组仍互斥（SPEC-03 §8）：无组或不同组的面板打开时关闭当前全部面板。
+func test_cross_group_panels_still_exclusive() -> void:
+	var codex: FakePanel = FakePanel.new()
+	add_child_autofree(codex)
+	_manager.register_panel("inventory", _panel, true, "crafting")
+	_manager.register_panel("codex", codex, true)
+	_manager.open("inventory")
+	_manager.open("codex")
+	assert_false((_panel as FakePanel).is_open(), "跨组打开图鉴应关闭背包")
+	assert_true(codex.is_open(), "图鉴应打开")
+	assert_eq(str(_manager.active_panel()), "codex", "当前面板应为 codex")
+
+
 # DeathScreen 裁决：死亡画面关闭后 Esc 照常放行给暂停菜单。
 func test_esc_passes_through_after_death_screen_closed() -> void:
 	(_death as FakeDeathScreen).open()

@@ -9,7 +9,7 @@ extends Control
 const HOTSPOT_PREFIX: String = "Zone_"
 const UI_BADGE_KEY: String = "map_locked_badge"
 
-# 占位配色（美术未交付，SPEC-08 调色板出来后整体替换）。
+# 占位配色（美术未交付区域沿用，SPEC-08 调色板出来后整体替换）。
 const COLOR_LOCKED: Color = Color(0.35, 0.35, 0.35)
 const UNLOCKED_COLORS: Array[Color] = [
 	Color(0.45, 0.75, 0.45),
@@ -18,6 +18,8 @@ const UNLOCKED_COLORS: Array[Color] = [
 	Color(0.80, 0.50, 0.40),
 	Color(0.60, 0.50, 0.85),
 ]
+# 挂场景图的热区用近白染色：不破坏图面观感，同时保持非灰（IT-U03 彩色断言）。
+const ART_TINT: Color = Color(1.0, 0.99, 0.98)
 
 # 抖动参数（一次性 Tween，不占 _process）。
 const SHAKE_OFFSET: float = 4.0
@@ -84,10 +86,15 @@ func _build_hotspots() -> void:
 		spot.position = Vector2(float(hs.get("x", 0.0)), float(hs.get("y", 0.0)))
 		spot.size = Vector2(float(hs.get("w", 0.0)), float(hs.get("h", 0.0)))
 		spot.focus_mode = Control.FOCUS_NONE
+		# 场景图（数据表 map_image 字段，铁律 4）：已解锁且有素材才挂，置于名称之下。
+		var image_path: String = str(row.get("map_image", ""))
+		var has_art: bool = unlocked and not image_path.is_empty() and ResourceLoader.exists(image_path)
+		if has_art:
+			spot.add_child(_make_zone_art(image_path))
 		# 名称放在子 Label 上：Button.text 会撑大最小尺寸，热区矩形必须严格照表（AC2）。
 		spot.add_child(_make_name_label(str(row.get("name", ""))))
 		if unlocked:
-			spot.modulate = UNLOCKED_COLORS[index % UNLOCKED_COLORS.size()]
+			spot.modulate = ART_TINT if has_art else UNLOCKED_COLORS[index % UNLOCKED_COLORS.size()]
 		else:
 			spot.modulate = COLOR_LOCKED
 			spot.add_child(_make_badge())
@@ -108,6 +115,18 @@ func _make_name_label(zone_name: String) -> Label:
 	label.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	label.grow_vertical = Control.GROW_DIRECTION_BOTH
 	return label
+
+
+# 热区场景图：铺满按钮、保持比例裁边，纯展示不抢鼠标（点击仍落在 Button 上）。
+func _make_zone_art(image_path: String) -> TextureRect:
+	var art := TextureRect.new()
+	art.name = "ZoneArt"
+	art.texture = load(image_path) as Texture2D
+	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	art.set_anchors_preset(Control.PRESET_FULL_RECT)
+	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	return art
 
 
 func _make_badge() -> Label:

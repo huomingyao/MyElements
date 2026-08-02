@@ -118,6 +118,30 @@ func test_hotspot_states_match_data_table() -> void:
 	assert_eq(unlocked_count, 5, "已解锁区域应恰好 5 个")
 
 
+# AC2：worldmap.json 带 map_image 的已解锁区域，热区内渲染场景图（TextureRect ZoneArt）；
+# 无 map_image 的区域（如学院）不挂图，保持纯配色占位。
+func test_zones_with_map_image_render_texture() -> void:
+	if _skip_unless_ready(["hotspot"]):
+		return
+	var rows: Array = Fixture.rows_of("worldmap.json")
+	var with_art: int = 0
+	for row in rows:
+		var zone_id: String = str(row.get("id", ""))
+		var spot: Node = _panel.hotspot(zone_id)
+		if spot == null:
+			continue
+		var art: Node = spot.get_node_or_null(NodePath("ZoneArt"))
+		var image_path: String = str(row.get("map_image", ""))
+		if image_path.is_empty():
+			assert_null(art, "%s 无 map_image 不应挂 ZoneArt" % zone_id)
+			continue
+		with_art += 1
+		assert_not_null(art, "%s 有 map_image 应挂 ZoneArt 场景图" % zone_id)
+		if art is TextureRect:
+			assert_not_null((art as TextureRect).texture, "%s ZoneArt 纹理应已加载" % zone_id)
+	assert_eq(with_art, 4, "worldmap.json 应有 4 条 map_image（草原/营地/盐湖/矿洞）")
+
+
 # AC3：点击已解锁区域显示简介 brief（数据表原文）。
 func test_unlocked_zone_click_shows_brief() -> void:
 	if _skip_unless_ready(["hotspot", "info_text"]):

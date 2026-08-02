@@ -436,11 +436,19 @@
 | `craft_cancel` | 取消 |
 | `craft_slot_empty` | （空） |
 | `inventory_title` | 背包 |
+| `inventory_craft_hint` | 按 X 打开合成台 |
+| `mentor_room_title` | 导师室 |
+| `mentor_room_hint` | 点击一位导师开始提问 |
+| `mentor_room_back` | 返回 |
 | `config_apply` | 确定 |
 | `chat_config` | 设置 |
 
 > 2026-08-02 补记（对标优化包C-5）：新增 `death_info` / `death_day` / `death_hint` 三键供死亡界面丰富化（损失说明 / 坚持天数 / 复活提示），`death_day` 的 `{n}` 由代码填入天数。validate_data 与 test_validator 的 `UI_STRING_KEYS` 白名单以本表为准。
 >
 > 2026-08-02 补记（审计修复包A/B/C）：新增 `config_apply`（确定，配置面板应用键）与 `chat_config`（设置，聊天框底栏配置面板入口按钮）两键；白名单同步。
+>
+> 2026-08-02 补记（FR-G-05 AC4 背包内合成入口）：新增 `inventory_craft_hint`（按 X 打开合成台，背包面板底部提示）；白名单同步。
+>
+> 2026-08-02 补记（导师室独立页）：新增 `mentor_room_title` / `mentor_room_hint` / `mentor_room_back`（导师室页标题 / 提问引导 / 返回键）；白名单同步。
 
 约束：UI 短语同样不许硬编码在场景/脚本里（NFR-04）。

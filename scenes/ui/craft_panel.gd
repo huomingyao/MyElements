@@ -84,7 +84,17 @@ func _ready() -> void:
 	_ignite_button.pressed.connect(ignite)
 	_purity_button.pressed.connect(purity_check)
 	_cancel_button.pressed.connect(close)
+	_setup_drop_forwarding()
 	_refresh()
+
+
+# 拖拽入料转发（FR-G-05 AC5 同屏并列）：面板根为 mouse_filter=IGNORE（不遮挡背包点击），
+# 拖放目标改为可见区域内的全部 Control——材料拖到合成界面任意可见处即入格。
+func _setup_drop_forwarding() -> void:
+	var panel_root: Control = get_node(^"Panel") as Control
+	panel_root.set_drag_forwarding(Callable(), _can_drop_data, _drop_data)
+	for node: Node in panel_root.find_children("*", "Control", true, false):
+		(node as Control).set_drag_forwarding(Callable(), _can_drop_data, _drop_data)
 
 
 # 世界接线入口：注入玩家背包（TP-06 纯逻辑背包，鸭子类型）。

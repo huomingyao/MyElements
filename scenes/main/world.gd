@@ -20,10 +20,6 @@ const PLAYER_SPAWN: Vector2 = Vector2(-400, -20)
 const MAP_BOUNDS: Rect2 = Rect2(-1700, -300, 4100, 400)
 const CAMP_CENTER: Vector2 = Vector2(1000, -20)
 const GRASS_GHOST_SPAWN: Vector2 = Vector2(-400, -30)
-# D2：主菜单学院门的出生点（学院建筑在 (-110, -40)，门口取建筑正前方）。
-const ACADEMY_GATE_SPAWN: Vector2 = Vector2(-110, 40)
-const SPAWN_OVERRIDE_META: String = "world_spawn_override"
-const SPAWN_ACADEMY_GATE: String = "academy_gate"
 
 const BAL_NIGHT_BRIGHTNESS: String = "daynight.night_brightness"
 const FALLBACK_NIGHT_BRIGHTNESS: float = 0.35
@@ -119,21 +115,10 @@ func _setup_logic_instances() -> void:
 	_hydrogen = (load(HYDROGEN_SCRIPT) as GDScript).new()
 
 
-# D2：主菜单学院门经树根元数据传出生点覆盖（一次性，消费即删）。
-func _resolve_spawn_point() -> Vector2:
-	var root: Window = get_tree().root
-	if root.has_meta(SPAWN_OVERRIDE_META):
-		var override_value: String = str(root.get_meta(SPAWN_OVERRIDE_META))
-		root.remove_meta(SPAWN_OVERRIDE_META)
-		if override_value == SPAWN_ACADEMY_GATE:
-			return ACADEMY_GATE_SPAWN
-	return PLAYER_SPAWN
-
-
 func _setup_player() -> void:
 	_player.inventory = _inventory
 	_player.item_effects = _item_effects
-	_player.global_position = _resolve_spawn_point()
+	_player.global_position = PLAYER_SPAWN
 	_player.reset_camera_smoothing() # 包A-4：出生点传送后相机立即对齐，不慢追
 	_player.set_map_bounds(MAP_BOUNDS)
 	_tip_layer.set_player(_player)
@@ -152,14 +137,17 @@ func _setup_ui() -> void:
 	_inventory_panel.bind(_inventory)
 	_inventory_panel.managed = true
 	_inventory_panel.toggle_requested.connect(_ui_manager.toggle.bind("inventory"))
+	_inventory_panel.craft_requested.connect(_ui_manager.toggle.bind("craft"))
 	_codex.set_discovery(_discovery)
-	_ui_manager.register_panel("craft", _craft, true)
-	_ui_manager.register_panel("inventory", _inventory_panel, true)
+	_ui_manager.register_panel("craft", _craft, true, "crafting")
+	_ui_manager.register_panel("inventory", _inventory_panel, true, "crafting")
 	_ui_manager.register_panel("codex", _codex, true)
-	var chat: Node = get_node_or_null(^"AcademyBuilding/%ChatPanel")
-	if chat != null:
-		_ui_manager.register_panel("chat", chat, false)
-		chat.set_hydrogen_event(_hydrogen)
+	# 导师室（独立页）：注册为模态面板，聊天框内嵌其中，不再单列 ui_manager 面板。
+	var room: Node = get_node_or_null(^"UILayer/MentorRoom")
+	if room != null:
+		_ui_manager.register_panel("mentor_room", room, true)
+		room.close_requested.connect(_ui_manager.close_active)
+		room.set_hydrogen_event(_hydrogen)
 	_ui_manager.active_changed.connect(_on_ui_active_changed)
 
 
@@ -328,6 +316,8 @@ func _night_brightness() -> float:
 # ==== 面板与输入屏蔽（SPEC-03 §8） ====
 
 func _on_craft_requested(_player_node: Node) -> void:
+	# FR-G-05 AC5：合成台打开时背包同屏并列（先背包后合成台，合成台在最上）。
+	_ui_manager.open("inventory")
 	_ui_manager.open("craft")
 
 

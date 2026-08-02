@@ -128,3 +128,7 @@ FR → 验收标准 → 测试用例 → Checklist 项 的完整映射见
 | 2026-08-02 | v1.6 | 包E3「文档收口」：包A/B/C 七项审计偏差修复（A1..A7，BUGS B-039..B-045 标 fixed）落账 + 本收口——SPEC-03 §9 四行占位展开为正式变更记录并补 config 面板注册/ui_strings 两键两行、SPEC-05 §9 补登 `config_apply`/`chat_config`、SPEC-01 FR-M-10 AC1 补游戏内入口、WORKLOG 测试基线 610→650 并追加审计修复批次行；头部状态行更新为「Phase 0–2 收口 + 审计偏差修复完成，Phase 3 进行中」 | 主 Agent |
 | 2026-08-02 | v1.7 | 新增 SPEC-WEB 网页版完整规格（九册 + SPEC-10 合并重写，55 条 FR / 10 JSON / 全文案内联，网页版开发只读此册） | 用户 |
 | 2026-08-02 | v1.8 | FR-U-06 面板自适应布局落地（IT-U06）：合成/背包/卡片模态面板按视口比例铺开并居中，主菜单/暂停菜单中心锚点，死亡画面垂直居中；`project.godot` 显式补 `stretch/aspect=keep` 并恢复会话中被 Godot 进程改写丢失的 640×360 视口行；SPEC-01/03/06 同步 | 主 Agent |
+| 2026-08-02 | v1.9 | 背包/合成面板替换宝箱美术底图（`assets/art/ui/panels.png` 切分为 `inventory_bg.png`/`craft_bg.png`）：面板改为底图 TextureRect + 控件锚点对准底图格子，面板比例按底图调整为背包 51%×83%、合成 34%×89%；FR-U-06 AC1 与 IT-U06 口径同步（SPEC-01/03/06） | 用户 |
+| 2026-08-02 | v2.0 | 主菜单按钮组下移至「中间偏下」：`main_menu` 的 `MenuBox` 垂直锚点 0.5→0.62（水平居中不变），避开背景人物区；FR-U-06 AC2 与 IT-U06 口径同步（SPEC-01/03/06），暂停菜单保持居中 | 用户 |
+| 2026-08-02 | v2.1 | FR-G-05 增 AC4 背包内合成快捷入口：新增输入动作 `craft`（X 键），背包打开时按 X 经 ui_manager 互斥切到合成界面；SPEC-02 §8 热键表补 `craft` 行、SPEC-05 §9 新增 `inventory_craft_hint` 键（背包底部提示）、SPEC-06 IT-U05/IT-G05 与追溯矩阵同步 | 用户 |
+| 2026-08-02 | v2.2 | FR-G-05 增 AC5 背包+合成台同屏并列与拖拽合成：SPEC-03 §8 裁决规则修订为「默认互斥、同组可并列」，`register_panel` 增 `group` 可选参；背包靠左、合成台靠右（FR-U-06 AC1 口径改同屏并列）；craft_panel 可见区域转发拖放；IT-U05/IT-G05/IT-U06/test_world 同步 | 用户 |

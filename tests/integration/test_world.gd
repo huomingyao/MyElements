@@ -81,7 +81,7 @@ func _night_length() -> float:
 	return float(gm.get_balance(BAL_NIGHT_DURATION, 180.0))
 
 
-# 总装：玩家/ HUD / 字幕层 / 合成台 / 卡片 / 背包 / 图鉴 / 学院 / CanvasModulate 全部就位。
+# 总装：玩家/ HUD / 字幕层 / 合成台 / 卡片 / 背包 / 图鉴 / 导师室 / 黑洞 / CanvasModulate 全部就位。
 func test_world_assembles_all_parts() -> void:
 	if _skip_unless_ready():
 		return
@@ -90,8 +90,9 @@ func test_world_assembles_all_parts() -> void:
 	for path: String in [
 		"UILayer/HUD", "UILayer/TipLayer", "UILayer/CraftPanel", "UILayer/CardPopup",
 		"UILayer/InventoryPanel", "UILayer/CodexPanel", "UILayer/UIManager",
+		"UILayer/MentorRoom",
 		"ZoneTriggers", "Collectables", "Facilities", "Monsters",
-		"AcademyBuilding", "CanvasModulate",
+		"BlackHoles", "CanvasModulate",
 	]:
 		assert_not_null(_world.get_node_or_null(NodePath(path)), "缺节点：%s" % path)
 	# 玩家背包与道具效果已注入（TP-09/TP-10 的鸭子类型约定）。
@@ -255,7 +256,7 @@ func test_inventory_blocks_player_input() -> void:
 	assert_false(_player.get("input_blocked"), "关闭后恢复")
 
 
-# 合成台接线（FR-G-05 入口）：空背包交互实验台 → 打开合成界面（ui_manager 裁决）。
+# 合成台接线（FR-G-05 入口 + AC5）：空背包交互实验台 → 合成界面与背包同屏并列打开。
 func test_bench_opens_craft_panel() -> void:
 	if _skip_unless_ready():
 		return
@@ -266,11 +267,18 @@ func test_bench_opens_craft_panel() -> void:
 	bench.interact(_player)
 	await wait_process_frames(1)
 	var craft: Node = _world.get_node(^"UILayer/CraftPanel")
+	var inv: Node = _world.get_node(^"UILayer/InventoryPanel")
 	assert_true(craft.is_open(), "合成台交互应打开合成界面")
+	assert_true(inv.is_open(), "AC5：合成界面打开时背包同屏并列打开")
 	assert_true(_player.get("input_blocked"), "合成界面打开时屏蔽玩家输入")
 	craft.close()
 	await wait_process_frames(1)
-	assert_false(_player.get("input_blocked"), "关闭合成界面后恢复")
+	assert_true(inv.is_open(), "关闭合成界面后背包保持打开（AC5）")
+	assert_true(_player.get("input_blocked"), "背包仍打开时输入仍屏蔽")
+	# 背包无 close_requested，经 ui_manager 关闭（等价 Esc 路径）。
+	_ui_manager().close_active()
+	await wait_process_frames(1)
+	assert_false(_player.get("input_blocked"), "全部关闭后恢复")
 
 
 # 卡片接线（FR-G-06 世界段）：合成成功 → 卡片弹窗弹出。
@@ -348,29 +356,46 @@ func test_hotkey_equips_torch() -> void:
 	assert_almost_eq(_player.view_radius(), torch_radius, 0.001, "火把视野半径按 balance")
 
 
-# 学院接线（TP-17）：学院实例在世界内，聊天框注册为不屏蔽输入的面板。
-# 收口 W1：聊天框具备 open/close/is_open 面板契约，ui_manager.open("chat") 不报错。
-func test_academy_instanced_with_chat_registered() -> void:
+# 导师室接线（2026-08-02 独立页方案）：导师室注册为 ui_manager 模态面板（屏蔽玩家输入），
+# 面板契约 open/close/is_open 生效；聊天框内嵌其中，不再单列注册。
+func test_mentor_room_registered_as_modal_panel() -> void:
 	if _skip_unless_ready():
 		return
-	var academy: Node = _world.get_node(^"AcademyBuilding")
-	var chat: Node = academy.get_node_or_null(^"%ChatPanel")
-	assert_not_null(chat, "学院内应有聊天框")
+	var room: Node = _world.get_node_or_null(^"UILayer/MentorRoom")
+	assert_not_null(room, "世界 UILayer 应有导师室")
 	var manager: Node = _ui_manager()
 	assert_not_null(manager, "应有 ui_manager")
-	if manager == null or chat == null:
+	if room == null or manager == null:
 		return
 	if manager.has_method("has_panel"):
-		assert_true(manager.has_panel("chat"), "聊天框应注册进 ui_manager")
-	assert_false(_player.get("input_blocked"), "前置：无面板打开")
-	manager.open("chat")
+		assert_true(manager.has_panel("mentor_room"), "导师室应注册进 ui_manager")
+	assert_false(room.is_open(), "初始应关闭")
+	manager.open("mentor_room")
 	await wait_process_frames(1)
-	assert_true(manager.is_open("chat"), "ui_manager.open(chat) 应命中面板契约")
-	assert_true(chat.is_open(), "聊天框契约 is_open() 应为真")
-	assert_false(_player.get("input_blocked"), "聊天框不屏蔽玩家输入（FR-M-02 AC1）")
+	assert_true(manager.is_open("mentor_room"), "ui_manager.open(mentor_room) 应命中面板契约")
+	assert_true(room.is_open(), "导师室契约 is_open() 应为真")
+	assert_true(room.visible, "打开后页面应可见")
+	assert_true(bool(_player.get("input_blocked")), "导师室打开应屏蔽玩家输入")
 	manager.close_active()
 	await wait_process_frames(1)
-	assert_false(chat.is_open(), "close_active() 应经契约关闭聊天框")
+	assert_false(room.is_open(), "close_active() 应经契约关闭导师室")
+	assert_false(room.visible, "关闭后页面应隐藏")
+
+
+# 区域间黑洞（2026-08-02）：玩家触碰草原东侧黑洞→黑屏传送→落在营地并切区。
+func test_black_hole_transports_player_to_next_zone() -> void:
+	if _skip_unless_ready():
+		return
+	_player.global_position = Vector2(-160, -20)
+	await wait_physics_frames(3)
+	_player.global_position = Vector2(-151, -60)
+	await wait_seconds(1.2)
+	assert_true(
+		_player.global_position.x > 600.0,
+		"触碰草原东缘黑洞应被传送到营地侧：%s" % str(_player.global_position)
+	)
+	await wait_physics_frames(3)
+	assert_eq(gm.current_zone(), "camp", "传送落点应触发营地切区")
 
 
 # 新手引导（FR-U-02 AC3 世界段）：走近河边触发一次 zone_river。
@@ -483,40 +508,6 @@ func test_sleep_fade_plays() -> void:
 		assert_true(gm.day_count >= 2, "睡觉跳夜到第二天")
 
 
-# D2（FR-C-08 AC1，2026-08-02）：树根元数据 world_spawn_override="academy_gate" 时，
-# world._ready 把玩家出生在学院门口而非默认出生点，且元数据一次性消费（不残留影响下次进入）。
-func test_academy_gate_spawn_override() -> void:
-	if _skip_unless_ready():
-		return
-	var default_pos: Vector2 = _player.global_position
-	var root: Window = Engine.get_main_loop().root
-	root.set_meta("world_spawn_override", "academy_gate")
-	remove_child(_world)
-	_world.queue_free()
-	_world = (load(WORLD_SCENE) as PackedScene).instantiate()
-	add_child(_world)
-	await wait_process_frames(3)
-	_player = _world.get_node_or_null(^"Player")
-	assert_not_null(_player, "重建世界后玩家应存在")
-	if _player == null:
-		return
-	assert_ne(
-		_player.global_position, default_pos,
-		"学院门进入时出生点不应是默认出生点（D2）"
-	)
-	var academy: Node2D = _world.get_node_or_null(^"AcademyBuilding") as Node2D
-	assert_not_null(academy, "世界应有学院建筑")
-	if academy != null:
-		assert_true(
-			_player.global_position.distance_to(academy.global_position) < 200.0,
-			"学院门进入时出生点应在学院门口附近（D2）"
-		)
-	assert_false(
-		root.has_meta("world_spawn_override"),
-		"出生点覆盖元数据应被一次性消费（D2）"
-	)
-
-
 # ==== 包A「世界与玩家手感」新增用例 ====
 
 # 包A-1：暂停菜单真暂停——打开时 get_tree().paused=true、三值 tick 停住，关闭恢复；
@@ -618,23 +609,17 @@ func test_camera_snaps_to_bed_after_respawn() -> void:
 		"复活传送后相机应立即对齐床边，而非横跨地图慢追")
 
 
-# 包A-6：区域触发器缝隙补齐——学院触发器（academy.tscn，覆盖 x -150..570）已填满
-# 草原↔营地带，真实缝隙是学院东缘（570）↔营地西缘（600）与营地东缘（1350）↔矿洞（1400）。
-# 从相邻区域走入才触发 body_entered：先在邻区落脚再进目标点。
+# 2026-08-02 黑洞方案：学院区从世界移除，原学院带（-150..600）由两端黑洞封住不再可达；
+# 营地↔矿洞缝隙由黑洞占据（传送行为见 test_black_hole_transports_player_to_next_zone）。
 func test_zone_triggers_cover_former_gaps() -> void:
 	if _skip_unless_ready():
 		return
-	_player.global_position = Vector2(300.0, -20.0) # 学院区域落脚
+	_player.global_position = Vector2(-160.0, -20.0) # 草原东缘落脚
 	await wait_physics_frames(3)
-	assert_eq(gm.current_zone(), "academy", "前置：x=300 应属学院区域")
-	_player.global_position = Vector2(585.0, -20.0) # 旧缝隙：学院东缘（570）↔营地西缘（600）
+	assert_eq(gm.current_zone(), "grassland", "前置：x=-160 应属草原")
+	_player.global_position = Vector2(585.0, -20.0) # 旧缝隙：原学院东缘↔营地西缘
 	await wait_physics_frames(5)
-	assert_eq(gm.current_zone(), "camp", "学院↔营地旧缝隙（x=585）应归属营地")
-	_player.global_position = Vector2(1900.0, -20.0) # 矿洞中心落脚
-	await wait_physics_frames(3)
-	_player.global_position = Vector2(1375.0, -20.0) # 旧缝隙：营地↔矿洞
-	await wait_physics_frames(5)
-	assert_eq(gm.current_zone(), "camp", "营地↔矿洞旧缝隙（x=1375）应归属营地")
+	assert_eq(gm.current_zone(), "camp", "原学院↔营地旧缝隙（x=585）应归属营地")
 
 
 # 包A-8：受伤触发相机小幅震动，震动结束 offset 精确复位。

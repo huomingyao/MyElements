@@ -22,9 +22,9 @@ texture = ExtResource("3")
 [node name="MenuBox" type="VBoxContainer" parent="."]
 anchors_preset = 8
 anchor_left = 0.5
-anchor_top = 0.5
+anchor_top = 0.62
 anchor_right = 0.5
-anchor_bottom = 0.5
+anchor_bottom = 0.62
 offset_left = -120.0
 offset_top = -109.0
 offset_right = 120.0

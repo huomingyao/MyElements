@@ -1,4 +1,9 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Texture2D" path="res://assets/art/map_zones/zone_saltlake.png" id="tex_saltlake"]
+[ext_resource type="Texture2D" path="res://assets/art/map_zones/zone_grassland.png" id="tex_grassland"]
+[ext_resource type="Texture2D" path="res://assets/art/map_zones/zone_camp.png" id="tex_camp"]
+[ext_resource type="Texture2D" path="res://assets/art/map_zones/zone_mine.png" id="tex_mine"]
 
 [sub_resource type="RectangleShape2D" id="ground_shape"]
 size = Vector2(4200, 40)
@@ -11,24 +16,28 @@ size = Vector2(40, 400)
 [node name="ZoneBackgrounds" type="Node2D" parent="."]
 
 [node name="SaltlakeBg" type="Polygon2D" parent="ZoneBackgrounds"]
-color = Color(0.55, 0.7, 0.85, 1)
+color = Color(1, 1, 1, 1)
 polygon = PackedVector2Array(-1700, -200, -700, -200, -700, 40, -1700, 40)
+texture = ExtResource("tex_saltlake")
+uv = PackedVector2Array(0, 0, 1024, 0, 1024, 512, 0, 512)
 
 [node name="GrasslandBg" type="Polygon2D" parent="ZoneBackgrounds"]
-color = Color(0.45, 0.7, 0.4, 1)
+color = Color(1, 1, 1, 1)
 polygon = PackedVector2Array(-700, -200, -150, -200, -150, 40, -700, 40)
-
-[node name="AcademyBg" type="Polygon2D" parent="ZoneBackgrounds"]
-color = Color(0.6, 0.5, 0.75, 1)
-polygon = PackedVector2Array(-150, -200, 600, -200, 600, 40, -150, 40)
+texture = ExtResource("tex_grassland")
+uv = PackedVector2Array(0, 0, 1024, 0, 1024, 384, 0, 384)
 
 [node name="CampBg" type="Polygon2D" parent="ZoneBackgrounds"]
-color = Color(0.7, 0.55, 0.35, 1)
+color = Color(1, 1, 1, 1)
 polygon = PackedVector2Array(600, -200, 1350, -200, 1350, 40, 600, 40)
+texture = ExtResource("tex_camp")
+uv = PackedVector2Array(0, 0, 1024, 0, 1024, 448, 0, 448)
 
 [node name="MineBg" type="Polygon2D" parent="ZoneBackgrounds"]
-color = Color(0.3, 0.28, 0.32, 1)
+color = Color(1, 1, 1, 1)
 polygon = PackedVector2Array(1400, -200, 2400, -200, 2400, 40, 1400, 40)
+texture = ExtResource("tex_mine")
+uv = PackedVector2Array(0, 0, 1024, 0, 1024, 384, 0, 384)
 
 [node name="River" type="Polygon2D" parent="."]
 color = Color(0.35, 0.6, 0.9, 1)

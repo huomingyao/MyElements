@@ -62,6 +62,13 @@ func _tab_event() -> InputEventAction:
 	return event
 
 
+func _craft_event() -> InputEventAction:
+	var event: InputEventAction = InputEventAction.new()
+	event.action = "craft"
+	event.pressed = true
+	return event
+
+
 # FR-G-02 AC4：Tab 打开/关闭背包界面。
 func test_tab_toggles_panel() -> void:
 	if _skip_unless_ready(["is_open"]):
@@ -221,6 +228,52 @@ func test_ui_manager_chat_exception_does_not_block() -> void:
 	manager.register_panel("chat", chat, false)
 	manager.open("chat")
 	assert_false(manager.input_blocked(), "聊天框打开不屏蔽玩家输入")
+
+
+# FR-G-05 AC4：背包打开时按 X（craft 动作）发出合成请求；未打开不触发；动作已注册。
+func test_craft_key_requests_craft_only_when_open() -> void:
+	assert_true(InputMap.has_action("craft"), "输入动作 craft 应已注册（FR-G-05 AC4）")
+	if _skip_unless_ready(["open", "close"]):
+		return
+	if not _panel.has_signal("craft_requested"):
+		fail_test("背包界面应有 craft_requested 信号（FR-G-05 AC4）")
+		return
+	var fired: Array = []
+	_panel.craft_requested.connect(func() -> void: fired.append(1))
+	_panel._unhandled_input(_craft_event())
+	assert_eq(fired.size(), 0, "背包未打开时不应触发合成请求")
+	_panel.open()
+	_panel._unhandled_input(_craft_event())
+	assert_eq(fired.size(), 1, "背包打开时按 craft 键应发出合成请求")
+
+
+# FR-G-05 AC4/AC5：craft_requested 经 ui_manager 同屏并列打开合成台（背包不关），
+# 再按 X（toggle）关闭合成台、背包保持。
+func test_craft_request_opens_craft_alongside_inventory() -> void:
+	if not FileAccess.file_exists(UI_MANAGER_SCRIPT):
+		fail_test("尚未实现 %s（SPEC-03 §8）" % UI_MANAGER_SCRIPT)
+		return
+	if _skip_unless_ready(["open"]):
+		return
+	if not _panel.has_signal("craft_requested"):
+		fail_test("背包界面应有 craft_requested 信号（FR-G-05 AC4）")
+		return
+	var manager: Node = (load(UI_MANAGER_SCRIPT) as GDScript).new()
+	add_child_autofree(manager)
+	var craft: FakePanel = FakePanel.new()
+	add_child_autofree(craft)
+	manager.register_panel("inventory", _panel, true, "crafting")
+	manager.register_panel("craft", craft, true, "crafting")
+	# 世界接线等价物：craft_requested → 开/关合成台（同组共存，背包不关）。
+	_panel.craft_requested.connect(manager.toggle.bind("craft"))
+	manager.open("inventory")
+	_panel._unhandled_input(_craft_event())
+	assert_true(craft.is_open(), "按 X 应打开合成界面")
+	assert_true(_panel.is_open(), "合成台打开时背包应保持同屏打开（AC5）")
+	assert_eq(manager.active_panel(), "craft", "最上面板应为 craft")
+	_panel._unhandled_input(_craft_event())
+	assert_false(craft.is_open(), "再按 X 应关闭合成界面")
+	assert_true(_panel.is_open(), "关闭合成台后背包保持打开")
 
 
 # NFR-04：逻辑代码里不许出现中文字面量（注释与诊断日志除外）。

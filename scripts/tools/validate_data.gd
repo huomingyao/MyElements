@@ -187,6 +187,8 @@ const UI_STRING_KEYS: Array[String] = [
 	"menu_map", "chat_send", "chat_close",
 	"craft_title", "craft_tool_portable", "craft_tool_lamp", "craft_tool_bench",
 	"craft_cancel", "craft_slot_empty", "inventory_title",
+	"inventory_craft_hint",
+	"mentor_room_title", "mentor_room_hint", "mentor_room_back",
 ]
 const ALLOWED_PLACEHOLDER: String = "{n}"
 const PLACEHOLDER_PATTERN: String = "\\{[^}]*\\}"

@@ -51,6 +51,7 @@ assets/
 ├── art/
 │   ├── icons/          # 16×16 物质与道具图标，文件名 = 数据表 id
 │   ├── tiles/          # TileSet 源图（按区域分文件）
+│   ├── map_zones/      # 区域场景图（白盒地形背景 + 地图页热区图，zone_<zone_id>.png）
 │   ├── chars/          # 32×32 玩家与怪物 spritesheet
 │   ├── mentors/        # 立绘 + 像素小人
 │   ├── ui/             # 面板、按钮、卡片底、地图页底图
@@ -70,6 +71,7 @@ assets/
 | 导师立绘 | `mentors/<mentor_id>_idle.png` / `_talk.png` | `mentors/chem_talk.png` |
 | 导师小人 | `mentors/<mentor_id>_pixel.png` | `mentors/monitor_pixel.png` |
 | 角色表 | `chars/<name>_sheet.png` | `chars/player_sheet.png` |
+| 区域场景图 | `map_zones/zone_<zone_id>.png` | `map_zones/zone_grassland.png`（worldmap.json `map_image` 与白盒 ZoneBackgrounds 共用；学院暂无素材保持纯色） |
 | 特效 | `fx/<effect>_<帧数>f.png` | `fx/explosion_6f.png` |
 | 音效 | `sfx/<动作>.ogg` | `sfx/craft_success.ogg` |
 

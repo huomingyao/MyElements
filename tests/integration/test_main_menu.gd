@@ -11,12 +11,11 @@ const PAUSE_SCENE: String = "res://scenes/main/pause_menu.tscn"
 const PAUSE_SCRIPT: String = "res://scenes/main/pause_menu.gd"
 
 # 世界场景路径由 SPEC-03 §8 钉死；图鉴路径是 TP-12 与 TP-16 的约定（见报告）。
-# D2（2026-08-02）：学院门不再进独立学院场景，而是加载世界场景 + 出生点元数据覆盖。
+# 2026-08-02：学院门改为整页进入导师室独立场景（取代 D2 世界内出生点覆盖）。
 const WORLD_SCENE_PATH: String = "res://scenes/main/world.tscn"
 const CODEX_SCENE_PATH: String = "res://scenes/ui/codex_panel.tscn"
+const MENTOR_ROOM_SCENE_PATH: String = "res://scenes/mentor/mentor_room.tscn"
 const MAIN_MENU_SCENE_PATH: String = "res://scenes/main/main_menu.tscn"
-const SPAWN_OVERRIDE_META: String = "world_spawn_override"
-const SPAWN_ACADEMY_GATE: String = "academy_gate"
 
 var _menu: Node = null
 var _pause: Node = null
@@ -54,9 +53,6 @@ func before_each() -> void:
 func after_each() -> void:
 	if _wm != null and _wm.is_open():
 		_wm.close()
-	var root: Window = Engine.get_main_loop().root
-	if root.has_meta(SPAWN_OVERRIDE_META):
-		root.remove_meta(SPAWN_OVERRIDE_META)
 
 
 func _record_nav(path: String) -> void:
@@ -81,8 +77,8 @@ func _menu_node(unique_name: String) -> Node:
 	return found
 
 
-# AC1：开始冒险 / 图鉴 门分别导航到世界 / 图鉴场景；
-# D2：导师学院门也导航到世界场景，但在树根写一次性出生点覆盖元数据（学院门口）。
+# AC1：开始冒险 / 导师学院 / 图鉴 门分别导航到世界 / 导师室 / 图鉴场景；
+# 2026-08-02：学院门整页进入导师室独立场景（不再写出生点覆盖元数据）。
 func test_three_doors_navigate_to_expected_scenes() -> void:
 	if _menu == null:
 		return
@@ -93,19 +89,15 @@ func test_three_doors_navigate_to_expected_scenes() -> void:
 		return
 	start_button.pressed.emit()
 	assert_eq(_nav_calls, [WORLD_SCENE_PATH], "开始冒险应加载世界场景")
-	var root: Window = Engine.get_main_loop().root
-	assert_false(root.has_meta(SPAWN_OVERRIDE_META), "开始冒险不应设出生点覆盖")
 	academy_button.pressed.emit()
-	assert_eq(_nav_calls, [WORLD_SCENE_PATH, WORLD_SCENE_PATH], "学院门应加载世界场景（D2）")
-	assert_true(root.has_meta(SPAWN_OVERRIDE_META), "学院门应设出生点覆盖元数据（D2）")
 	assert_eq(
-		str(root.get_meta(SPAWN_OVERRIDE_META)), SPAWN_ACADEMY_GATE,
-		"学院门出生点覆盖应为 academy_gate（D2）"
+		_nav_calls, [WORLD_SCENE_PATH, MENTOR_ROOM_SCENE_PATH],
+		"学院门应整页进入导师室场景"
 	)
 	codex_button.pressed.emit()
 	assert_eq(
 		_nav_calls,
-		[WORLD_SCENE_PATH, WORLD_SCENE_PATH, CODEX_SCENE_PATH],
+		[WORLD_SCENE_PATH, MENTOR_ROOM_SCENE_PATH, CODEX_SCENE_PATH],
 		"图鉴门应加载图鉴界面"
 	)
 

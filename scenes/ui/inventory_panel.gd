@@ -6,11 +6,13 @@ extends Control
 
 # managed 模式下 Tab 的开关请求（世界把它接到 ui_manager.toggle）。
 signal toggle_requested()
+# 背包打开时按 X（craft 动作）请求切到合成界面（FR-G-05 AC4；世界接到 ui_manager.open("craft")）。
+signal craft_requested()
 
 # ==== 常量区 ====
 
 const GRID_COLUMNS: int = 4
-const SLOT_MIN_SIZE: Vector2 = Vector2(72, 52)
+const SLOT_MIN_SIZE: Vector2 = Vector2(64, 48)
 const PLACEHOLDER_SIZE: int = 32
 const PLACEHOLDER_SATURATION: float = 0.55
 const PLACEHOLDER_VALUE: float = 0.85
@@ -18,7 +20,9 @@ const HASH_NORMALIZER: float = 1073741824.0
 const HUE_FULL_TURN: float = 1.0
 
 const UI_TITLE: String = "inventory_title"
+const UI_CRAFT_HINT: String = "inventory_craft_hint"
 const ACTION_TOGGLE: String = "inventory"
+const ACTION_CRAFT: String = "craft"
 
 # ==== 逻辑区 ====
 
@@ -35,6 +39,7 @@ var _slots: Array = []
 
 @onready var _title: Label = %TitleLabel
 @onready var _grid: GridContainer = %Grid
+@onready var _craft_hint: Label = %HintLabel
 
 
 # 格子按钮：携带物品 id，支持拖拽（FR-U-05）。
@@ -63,6 +68,7 @@ class SlotButton:
 func _ready() -> void:
 	visible = false
 	_title.text = _ui(UI_TITLE)
+	_craft_hint.text = _ui(UI_CRAFT_HINT)
 	_rebuild_slots()
 	_refresh()
 
@@ -101,6 +107,7 @@ func toggle() -> void:
 
 
 # Tab 开关（FR-G-02 AC4）；managed 时转发给 ui_manager。
+# X（craft 动作）：背包打开时请求切到合成界面（FR-G-05 AC4）。
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed(ACTION_TOGGLE):
 		if managed:
@@ -108,6 +115,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		else:
 			toggle()
 		get_viewport().set_input_as_handled()
+		return
+	if event.is_action_pressed(ACTION_CRAFT):
+		if _open:
+			craft_requested.emit()
+			get_viewport().set_input_as_handled()
 
 
 # ==== 测试观测口 ====
@@ -156,6 +168,9 @@ func _rebuild_slots() -> void:
 		slot.name = "Slot%d" % i
 		slot.unique_name_in_owner = true
 		slot.custom_minimum_size = SLOT_MIN_SIZE
+		slot.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		slot.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		slot.flat = true
 		slot.preview_factory = make_drag_preview
 		var icon: TextureRect = TextureRect.new()
 		icon.name = "Icon"

@@ -37,5 +37,9 @@
   "craft_tool_bench": "实验台",
   "craft_cancel": "取消",
   "craft_slot_empty": "（空）",
-  "inventory_title": "背包"
+  "inventory_title": "背包",
+  "inventory_craft_hint": "按 X 打开合成台",
+  "mentor_room_title": "导师室",
+  "mentor_room_hint": "点击一位导师开始提问",
+  "mentor_room_back": "返回"
 }
