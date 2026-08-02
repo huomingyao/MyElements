@@ -160,6 +160,97 @@ func test_hit_by_spray_is_idempotent() -> void:
 	assert_true(mist.is_destroyed(), "命中后应处于已销毁状态")
 
 
+# ==== 包B修复5：撞墙自行重锁定 + 存活超时自销毁 ====
+
+# 在指定位置立一堵静态墙（矩形碰撞体），供射线探测测试。
+func _spawn_wall(at: Vector2) -> StaticBody2D:
+	var wall: StaticBody2D = StaticBody2D.new()
+	var shape: CollisionShape2D = CollisionShape2D.new()
+	var rect: RectangleShape2D = RectangleShape2D.new()
+	rect.size = Vector2(10.0, 200.0)
+	shape.shape = rect
+	wall.add_child(shape)
+	wall.position = at
+	add_child_autofree(wall)
+	return wall
+
+
+# 撞墙探测：沿锁定方向的短距射线命中墙体为 true，无墙方向为 false。
+func test_is_wall_ahead_probe() -> void:
+	if not _implemented():
+		return
+	var mist: Node2D = _spawn_mist(Vector2.ZERO)
+	for method_name: String in ["is_wall_ahead", "apply_timeout", "despawn", "lifetime_seconds"]:
+		if not mist.has_method(method_name):
+			fail_test("MonsterAcidMist 应有 %s()（包B修复5）" % method_name)
+			return
+	_spawn_wall(Vector2(12.0, 0.0)) # 墙面需在探测射程内（WALL_PROBE_DISTANCE=16）
+	await wait_physics_frames(3) # 等墙体在物理空间注册
+	mist.redirect(Vector2(200.0, 0.0))
+	assert_true(mist.is_wall_ahead(), "墙在锁定方向前方应探测到")
+	mist.redirect(Vector2(0.0, 200.0))
+	assert_false(mist.is_wall_ahead(), "无墙方向不应误报")
+
+
+# 行为：撞墙后不再等世界调用 redirect()——_physics_process 内自行重锁定玩家方向。
+func test_mist_redirects_itself_when_hitting_wall() -> void:
+	if not _implemented():
+		return
+	var mist: Node2D = _spawn_mist(Vector2.ZERO)
+	if not mist.has_method("is_wall_ahead"):
+		fail_test("MonsterAcidMist 应有 is_wall_ahead()（包B修复5）")
+		return
+	_spawn_wall(Vector2(25.0, 0.0))
+	var player: CharacterBody2D = _spawn_player(Vector2(0.0, 100.0))
+	mist.target_player = player
+	mist.redirect(Vector2(200.0, 0.0))
+	assert_almost_eq(mist.charge_direction().x, 1.0, 0.001, "前置：锁定朝墙方向")
+	await wait_physics_frames(30)
+	assert_gt(mist.charge_direction().y, 0.9, "撞墙后应自行重锁定朝向玩家")
+
+
+# 存活超时自销毁（防锁定方向飞出地图永不回收），时长读 balance 的
+# monsters.acid_mist_lifetime_seconds；自销毁与喷雾命中同路径，幂等。
+func test_mist_despawns_after_lifetime() -> void:
+	if not _implemented():
+		return
+	var mist: Node2D = _spawn_mist(Vector2.ZERO)
+	if not mist.has_method("apply_timeout"):
+		fail_test("MonsterAcidMist 应有 apply_timeout()（包B修复5）")
+		return
+	var lifetime: float = float(gm.get_balance("monsters.acid_mist_lifetime_seconds", -1.0))
+	assert_gt(lifetime, 0.0, "balance 应有 monsters.acid_mist_lifetime_seconds")
+	assert_almost_eq(mist.lifetime_seconds(), lifetime, 0.001, "存活时长应读自 balance")
+	watch_signals(mist)
+	assert_false(mist.apply_timeout(lifetime - 1.0), "未达超时时长不应自销毁")
+	assert_false(mist.is_queued_for_deletion(), "未达超时应存活")
+	assert_true(mist.apply_timeout(2.0), "累计超过存活时长应自销毁")
+	assert_true(mist.is_destroyed(), "超时后应处于已销毁状态")
+	assert_signal_emit_count(mist, "destroyed", 1, "销毁信号只发一次")
+	assert_true(mist.is_queued_for_deletion(), "超时后应被释放")
+	mist.hit_by_spray() # 已销毁后重复命中不崩溃、不重复发信号
+	assert_signal_emit_count(mist, "destroyed", 1, "自销毁后喷雾命中不应重复发信号")
+
+
+# 模块化重构（视觉逻辑分离）：毒雾外圈/主体/内芯拆成 Visuals 下独立节点，可针对单部件修改。
+func test_modular_node_structure() -> void:
+	var mist: Node2D = _spawn_mist(Vector2.ZERO)
+	if mist == null:
+		return
+	var visuals: Node = mist.get_node_or_null(^"%Visuals")
+	assert_not_null(visuals, "酸雾怪应有 %Visuals 视觉容器（模块化重构）")
+	if visuals == null:
+		return
+	for part_name: String in ["Glow", "Body", "Core"]:
+		var part: Node = mist.get_node_or_null(NodePath("%" + part_name))
+		assert_not_null(part, "酸雾怪应有 %s 部件（模块化重构）" % part_name)
+		if part == null:
+			continue
+		assert_true(part is Polygon2D, "%s 部件应为 Polygon2D" % part_name)
+		assert_eq(part.get_parent(), visuals, "%s 部件应挂在 %Visuals 容器下" % part_name)
+	assert_not_null(mist.get_node_or_null(^"%HitArea"), "冲撞判定 %HitArea 必须保留")
+
+
 # 逻辑代码不许出现中文文案（NFR-04；push_warning/push_error/print 诊断日志除外）。
 func test_source_has_no_chinese_literals() -> void:
 	if not _implemented():

@@ -23,11 +23,21 @@ const LLM_CLIENT_PATH: NodePath = ^"/root/LLMClient"
 const UI_PLACEHOLDER_KEY: String = "chat_placeholder"
 const UI_SEND_KEY: String = "chat_send"
 const UI_CLOSE_KEY: String = "chat_close"
+# 设置入口按钮文案（包A-3：ConfigPanel 可达性，FR-M-10）。
+const UI_CONFIG_KEY: String = "chat_config"
+# ui_manager 面板名（SPEC-03 §8）：本聊天框与配置面板。
+const PANEL_CONFIG: String = "config"
+# 世界总装里的裁决器（world.tscn 的 UILayer/UIManager），按祖先链惰性解析。
+const UI_MANAGER_REL: NodePath = ^"UILayer/UIManager"
 # Esc 对应的输入动作（FR-C-01 输入映射）。
 const ACTION_CLOSE: String = "pause"
+# 打字跳过的确认键（项目默认输入映射）。
+const ACTION_SKIP: String = "ui_accept"
 
 const MODE_IDLE: String = "idle"
 const MODE_TALK: String = "talk"
+# ui_manager 无参 open() 的默认导师：班主任首接（FR-M-04）。
+const DEFAULT_MENTOR_ID: String = "monitor"
 # 立绘显示尺寸（占位期生成图也按这个尺寸）。
 const AVATAR_SIZE: Vector2i = Vector2i(96, 96)
 # 打字速度默认值（字/秒）。balance.json 归 P1 单写（SPEC-07 §3.2），
@@ -52,6 +62,14 @@ var _open: bool = false
 var _busy: bool = false
 var _typing: bool = false
 var _avatar_mode: String = MODE_IDLE
+# ui_manager 无参 open() 的开场导师：academy 按被交互的导师注入（包A-4）；
+# 空串时维持原语义——班主任首接（FR-M-04）。
+var _pending_mentor_id: String = ""
+# 打字跳过：请求标记 + 当前行的完整文本与标签引用（skip_typing 同步补全用）。
+var _skip_typing: bool = false
+var _typing_label: Label = null
+var _typing_speaker: String = ""
+var _typing_full: String = ""
 
 @onready var _avatar: TextureRect = %MentorAvatar
 @onready var _name_label: Label = %MentorName
@@ -60,6 +78,7 @@ var _avatar_mode: String = MODE_IDLE
 @onready var _input: LineEdit = %InputLine
 @onready var _send_button: Button = %SendButton
 @onready var _close_button: Button = %CloseButton
+@onready var _config_button: Button = %ConfigButton
 
 
 # ==== 逻辑区 ====
@@ -74,9 +93,11 @@ func _ready() -> void:
 	_input.placeholder_text = _ui_string(UI_PLACEHOLDER_KEY)
 	_send_button.text = _ui_string(UI_SEND_KEY)
 	_close_button.text = _ui_string(UI_CLOSE_KEY)
+	_config_button.text = _ui_string(UI_CONFIG_KEY)
 	_input.text_submitted.connect(_on_text_submitted)
 	_send_button.pressed.connect(_on_send_pressed)
 	_close_button.pressed.connect(close_chat)
+	_config_button.pressed.connect(_on_config_pressed)
 	send_requested.connect(_on_send_requested)
 
 
@@ -114,8 +135,44 @@ func is_chat_open() -> bool:
 	return _open
 
 
+# ==== ui_manager 面板契约（SPEC-03 §8，收口 W1）====
+# ui_manager 统一按 open/close/is_open 驱动注册面板；这里委托到既有聊天方法，
+# 不改 open_chat/close_chat/is_chat_open 签名。无参 open() 按班主任首接落默认导师，
+# academy 注入过 pending 导师时以被交互的导师开场（包A-4）。
+func open() -> void:
+	var mentor_id: String = _pending_mentor_id
+	_pending_mentor_id = ""
+	if mentor_id.is_empty():
+		mentor_id = DEFAULT_MENTOR_ID
+	open_chat(mentor_id)
+
+
+# academy 在 ui_manager.open("chat") 前注入被交互的导师（一次性，open() 消费即清）。
+func set_pending_mentor(mentor_id: String) -> void:
+	_pending_mentor_id = mentor_id
+
+
+func close() -> void:
+	close_chat()
+
+
+func is_open() -> bool:
+	return is_chat_open()
+
+
 func is_typing() -> bool:
 	return _typing
+
+
+# 打字跳过（优化包C-4）：打字进行中点击面板或按确认键，当前行立即补全显示。
+# 同步把全行写上屏，不等逐字循环走到下一个字符。
+func skip_typing() -> void:
+	if not _typing:
+		return
+	_skip_typing = true
+	if _typing_label != null and is_instance_valid(_typing_label):
+		_typing_label.text = _line_text(_typing_speaker, _typing_full)
+		_scroll_to_bottom()
 
 
 func avatar_mode() -> String:
@@ -166,6 +223,15 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed(ACTION_CLOSE):
 		close_chat()
 		get_viewport().set_input_as_handled()
+		return
+	# 打字进行中：点击面板或按确认键跳过当前行的逐字等待（优化包C-4）。
+	if _typing:
+		if event.is_action_pressed(ACTION_SKIP):
+			skip_typing()
+			get_viewport().set_input_as_handled()
+		elif event is InputEventMouseButton and (event as InputEventMouseButton).pressed:
+			skip_typing()
+			get_viewport().set_input_as_handled()
 
 
 # 逐条打出本轮全部回复；每条先说的人换成立绘 talk，说完回 idle。
@@ -186,13 +252,20 @@ func _type_all(messages: Array) -> void:
 	all_messages_finished.emit()
 
 
-# 逐字打字（AC2）：每帧追加一个字符，速度可调。
+# 逐字打字（AC2）：每帧追加一个字符，速度可调；收到跳过请求时立即补全整行。
 func _type_line(speaker: String, text: String) -> void:
 	_typing = true
+	_skip_typing = false
 	var label: Label = _append_line(speaker, "", false)
+	_typing_label = label
+	_typing_speaker = speaker
+	_typing_full = text
 	var shown: String = ""
 	for i in text.length():
 		if not _open:
+			break
+		if _skip_typing:
+			# skip_typing() 已同步补全上屏，这里只结束等待。
 			break
 		shown += text[i]
 		label.text = _line_text(speaker, shown)
@@ -200,6 +273,9 @@ func _type_line(speaker: String, text: String) -> void:
 		var per_char: float = 1.0 / maxf(typing_chars_per_second, MIN_TYPING_SPEED)
 		if per_char > 0.0001:
 			await get_tree().create_timer(per_char).timeout
+	_typing_label = null
+	_typing_full = ""
+	_skip_typing = false
 	_typing = false
 
 
@@ -260,6 +336,26 @@ func _submit(raw: String) -> void:
 
 func _on_send_requested(raw: String) -> void:
 	await send_text(raw)
+
+
+# 设置入口（包A-3：FR-M-10 可达性）：经 ui_manager 打开配置面板，参与互斥裁决
+# （config 打开时本面板被 close_active 关掉）；无 ui_manager（单测独立实例化）时不动作。
+func _on_config_pressed() -> void:
+	var manager: Node = _find_ui_manager()
+	if manager == null:
+		return
+	manager.open(PANEL_CONFIG)
+
+
+# 沿祖先链找世界总装里的 UIManager；独立实例化（测试）时找不到返回 null。
+func _find_ui_manager() -> Node:
+	var node: Node = self
+	while node != null:
+		var candidate: Node = node.get_node_or_null(UI_MANAGER_REL)
+		if candidate != null and candidate.has_method("open"):
+			return candidate
+		node = node.get_parent()
+	return null
 
 
 func _scroll_to_bottom() -> void:

@@ -7,6 +7,10 @@ const TRADER_SCRIPT: String = "res://scenes/gameplay/native_trader.gd"
 const INVENTORY_SCRIPT: String = "res://scripts/gameplay/inventory.gd"
 const ITEM_EFFECTS_SCRIPT: String = "res://scripts/gameplay/item_effects.gd"
 
+# 字幕队列冲刷时长（秒）：新语义下入队≠已展示（_shown 在 _start 标记），
+# 断言前一次性推进足够清空排队横幅（单条最长 warning 5s）。
+const TIP_FLUSH_SECONDS: float = 60.0
+
 var gm: Node = null
 var tip: Node = null
 var _trader: Node = null
@@ -98,6 +102,9 @@ func test_sell_item_grants_energy() -> void:
 	assert_true(_trader.sell_slot(0), "卖出应成功")
 	assert_eq(player.inventory.count_of("oxygen_tank"), 0, "道具应从背包消失")
 	assert_almost_eq(gm.energy, expected, 0.001, "能量应按 balance 增加")
+	# 新语义（包C-3）：入队≠已展示；sys_trade_done 排在 sys_trade_prompt 之后，
+	# 结算队列后再断言。
+	tip.advance(TIP_FLUSH_SECONDS)
 	assert_true(tip.is_shown("sys_trade_done"), "成交应显示 sys_trade_done")
 	assert_false(_trader.is_trading(), "成交后退出交易态")
 
@@ -125,6 +132,7 @@ func test_sell_empty_slot_fails_gracefully() -> void:
 	var player: FakePlayer = _make_player()
 	_trader.interact(player)
 	assert_false(_trader.sell_slot(0), "空格不应成交")
+	tip.advance(TIP_FLUSH_SECONDS) # 新语义：入队≠已展示，结算队列后再断言
 	assert_true(tip.is_shown("sys_trade_empty"), "空格应显示 sys_trade_empty")
 	assert_true(_trader.is_trading(), "未成交时保持交易态")
 
@@ -138,6 +146,7 @@ func test_sell_substance_refused() -> void:
 	_trader.interact(player)
 	assert_false(_trader.sell_slot(0), "物质不应成交")
 	assert_eq(player.inventory.count_of("o2"), 1, "物质不应被扣")
+	tip.advance(TIP_FLUSH_SECONDS) # 新语义：入队≠已展示，结算队列后再断言
 	assert_true(tip.is_shown("sys_trade_empty"), "拒绝时应显示 sys_trade_empty")
 
 

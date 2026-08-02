@@ -7,7 +7,8 @@
     "effect": "light",
     "effect_value_key": "daynight.torch_view_radius",
     "consumable": false,
-    "tip_id": "warn_night"
+    "tip_id": "warn_night",
+    "obtain": "便携格合成：木棒 + 硫，点燃"
   },
   {
     "id": "neutral_spray",
@@ -16,7 +17,8 @@
     "icon": "res://assets/art/icons/neutral_spray.png",
     "effect": "kill_acid",
     "consumable": true,
-    "tip_id": "sys_spray"
+    "tip_id": "sys_spray",
+    "obtain": "实验台合成：稀盐酸 + 氢氧化钠"
   },
   {
     "id": "activated_carbon",
@@ -25,7 +27,8 @@
     "icon": "res://assets/art/icons/activated_carbon.png",
     "effect": "kill_co",
     "consumable": true,
-    "tip_id": "sys_carbon"
+    "tip_id": "sys_carbon",
+    "obtain": "酒精灯加热碳，高温活化（物理变化）"
   },
   {
     "id": "carbon_mask",
@@ -34,7 +37,8 @@
     "icon": "res://assets/art/icons/carbon_mask.png",
     "effect": "immune_co",
     "consumable": false,
-    "tip_id": "sys_carbon"
+    "tip_id": "sys_carbon",
+    "obtain": "营地试剂架拾取"
   },
   {
     "id": "extinguisher",
@@ -42,7 +46,8 @@
     "type": "consume",
     "icon": "res://assets/art/icons/extinguisher.png",
     "effect": "extinguish",
-    "consumable": true
+    "consumable": true,
+    "obtain": "实验台合成：碳酸氢钠 + 稀盐酸"
   },
   {
     "id": "oxygen_tank",
@@ -51,7 +56,8 @@
     "icon": "res://assets/art/icons/oxygen_tank.png",
     "effect": "restore_oxygen",
     "effect_value_key": "items.oxygen_tank_restore",
-    "consumable": true
+    "consumable": true,
+    "obtain": "电解器电解纯净水成功时额外灌装"
   },
   {
     "id": "soap_water",
@@ -60,7 +66,8 @@
     "icon": "res://assets/art/icons/soap_water.png",
     "effect": "test_hardwater",
     "consumable": true,
-    "tip_id": "sys_hardwater"
+    "tip_id": "sys_hardwater",
+    "obtain": "营地水边拾取"
   },
   {
     "id": "stick",
@@ -68,7 +75,8 @@
     "type": "material",
     "icon": "res://assets/art/icons/stick.png",
     "effect": "none",
-    "consumable": false
+    "consumable": false,
+    "obtain": "草原拾取"
   },
   {
     "id": "cu",
@@ -76,7 +84,8 @@
     "type": "material",
     "icon": "res://assets/art/icons/cu.png",
     "effect": "none",
-    "consumable": false
+    "consumable": false,
+    "obtain": "实验台湿法炼铜：铁 + 硫酸铜溶液"
   },
   {
     "id": "nahco3",
@@ -84,6 +93,7 @@
     "type": "material",
     "icon": "res://assets/art/icons/nahco3.png",
     "effect": "none",
-    "consumable": false
+    "consumable": false,
+    "obtain": "营地试剂架拾取"
   }
 ]

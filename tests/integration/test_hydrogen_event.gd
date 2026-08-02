@@ -158,6 +158,42 @@ func test_repeated_unpure_ignite_explodes_again() -> void:
 	assert_almost_eq(gm.health, health_after_first - damage, 0.001, "第二次未验纯点燃应再次扣血")
 
 
+# 优化包C-2：氢气关键词首次加载后缓存，逐条提问不再重读 qa_fallback.json 整表。
+func test_hydrogen_keywords_cached_between_questions() -> void:
+	if not _ready_ok:
+		return
+	assert_true(event.question_mentions_hydrogen("氢气会爆炸吗"), "前置：数据表关键词应命中")
+	if event.get("_h2_keywords") == null:
+		fail_test("HydrogenEvent 应缓存氢气关键词（_h2_keywords），逐条提问不重读磁盘")
+		return
+	# 换掉缓存内容后判定跟随缓存 → 证明第二次判定没有重读磁盘。
+	event._h2_keywords = ["__cache_probe__"]
+	assert_true(
+		event.question_mentions_hydrogen("__cache_probe__"),
+		"第二次判定应走内存缓存而非重读数据表"
+	)
+	assert_false(
+		event.question_mentions_hydrogen("氢气会爆炸吗"),
+		"缓存生效期间不应再读到磁盘上的关键词"
+	)
+
+
+# 数据 reload（文件变动被检测到）后缓存必须失效，重新读表命中真实关键词。
+func test_hydrogen_keyword_cache_invalidates_on_data_change() -> void:
+	if not _ready_ok:
+		return
+	event.question_mentions_hydrogen("氢气")
+	if event.get("_h2_keywords_mtime") == null:
+		fail_test("HydrogenEvent 应记录关键词缓存的数据版本（_h2_keywords_mtime）以便失效重载")
+		return
+	event._h2_keywords = ["__cache_probe__"]
+	event._h2_keywords_mtime = -1  # 模拟检测到数据表变动后的失效标记
+	assert_true(
+		event.question_mentions_hydrogen("氢气会爆炸吗"),
+		"缓存失效后应重新读表命中真实关键词"
+	)
+
+
 # ---------- IT-G09 / FR-G-09 验纯解锁与成功点燃 ----------
 
 # AC1：问过导师（unlock_purity_check 回调）前不出现验纯步骤，问过后出现。

@@ -32,6 +32,14 @@ const DISPATCH_LIMIT: int = 1
 const MAX_MESSAGES: int = 3
 const MAX_TARGETS: int = MAX_MESSAGES - 1
 
+# FR-M-07 AC2：每导师对话历史在 router 侧最多保留最近 4 轮
+# （与 balance.json 的 llm.history_rounds 默认值一致；LLMClient._trim_history
+# 会再按配置裁一次，这里的硬上限只防长期会话的记忆膨胀）。
+const HISTORY_ROUND_LIMIT: int = 4
+# 历史元素字段（SPEC-03 §6.2「历史元素约定」：一个元素 = 一轮对话）。
+const H_QUESTION: String = "question"
+const H_ANSWER: String = "answer"
+
 # 未注入 provider 时的回复来源（TP-15 会把在线/离线逻辑做全）。
 const LLM_PATH: NodePath = ^"LLMClient"
 const LLM_ASK: String = "ask"
@@ -43,6 +51,10 @@ var _dispatch: Array = []
 var _dispatch_count: int = 0
 var _reply_provider: Callable = Callable()
 var _suffix: RefCounted = Suffix.new()
+# 最近一次 _reply_of 的回答来源是否离线（LLMClient.is_offline 语义 / provider 自报）。
+var _last_offline: bool = false
+# 每导师的对话历史（FR-M-07 AC2）：mentor_id -> [{question, answer}]，只记真实在线问答。
+var _history: Dictionary = {}
 
 
 # ==== 逻辑区 ====
@@ -55,6 +67,8 @@ func load_from(rows: Array) -> void:
 	_by_id = DataLoader.index_by_id(rows)
 	_mention_to_id = {}
 	_dispatch = []
+	# 换数据即换会话：历史一并清空，不把旧人设的问答带进新上下文。
+	_history = {}
 	for row_value in rows:
 		if typeof(row_value) != TYPE_DICTIONARY:
 			continue
@@ -145,7 +159,11 @@ func handle_message(question: String) -> Array:
 		return messages
 	var category: String = classify(clean)
 	var reply: String = str(await _reply_of(MONITOR_ID, clean))
-	var offline: bool = reply.strip_edges().is_empty()
+	# offline 跟随实际回答来源（LLMClient 的 is_offline 语义 / provider 自报）；
+	# 空回复同样按离线路径处理。
+	var offline: bool = _last_offline or reply.strip_edges().is_empty()
+	# 离线路径班主任只说数据表里的调度语（SPEC-05 §4.3 / FR-M-04 AC2）：
+	# qa_fallback 答案留给被派导师讲——班主任不直接讲化学，双方也不重复输出同一答案。
 	var monitor_text: String = _dispatch_line(category) if offline else reply
 	if monitor_text.strip_edges().is_empty():
 		return messages
@@ -157,7 +175,8 @@ func handle_message(question: String) -> Array:
 		var target_reply: String = str(await _reply_of(target_id, clean))
 		if target_reply.strip_edges().is_empty():
 			continue
-		messages.append(_message(target_id, target_reply, false))
+		# 被派导师的 offline 同样透传回答来源，不再硬编码 false。
+		messages.append(_message(target_id, target_reply, _last_offline))
 	return messages
 
 
@@ -200,7 +219,7 @@ func _entry_of(category: String) -> Dictionary:
 	return {}
 
 
-# 回复为空时班主任那条走数据表里的调度语（离线兜底，文本仍在表里）。
+# 离线路径班主任那条走数据表里的调度语（SPEC-05 §4.3 四条模板，文本只在表里）。
 func _dispatch_line(category: String) -> String:
 	return str(_entry_of(category).get(F_LINE, ""))
 
@@ -210,13 +229,52 @@ func _message(mentor_id: String, text: String, offline: bool) -> Dictionary:
 
 
 # 未注入 provider 时走 LLMClient（它内部负责清理、历史、离线兜底）。
+# 每次调用都刷新 _last_offline：provider 可返回 String（空串视为离线兜底，维持旧语义）
+# 或 {text, offline} 字典（来源自报在线状态）；LLMClient 路径取它的 is_offline()。
 func _reply_of(mentor_id: String, question: String) -> String:
+	_last_offline = false
 	if _reply_provider.is_valid():
-		return str(await _reply_provider.call(mentor_id, question))
+		return _provider_text(await _reply_provider.call(mentor_id, question))
 	var llm: Object = _llm_client()
 	if llm == null:
+		# 没有回答来源等价于离线：班主任那条会走数据表调度语兜底。
+		_last_offline = true
 		return ""
-	return str(await llm.call(LLM_ASK, mentor_id, question, []))
+	# FR-M-07 AC2：带上该导师最近几轮历史（ask 的第三参，冻结签名不变）。
+	var text: String = str(await llm.call(LLM_ASK, mentor_id, question, _history_for(mentor_id)))
+	if llm.has_method("is_offline"):
+		_last_offline = bool(llm.call("is_offline"))
+	else:
+		_last_offline = text.strip_edges().is_empty()
+	# 只有真实的在线问答才进历史：离线兜底（qa_fallback + 角标）不是导师的在线回答，
+	# 混进历史会污染恢复在线后的上下文。
+	if not _last_offline and not text.strip_edges().is_empty():
+		_record_round(mentor_id, question, text)
+	return text
+
+
+# 该导师的最近历史（FR-M-07 AC2）；元素形状 {question, answer}（SPEC-03 §6.2 历史元素约定）。
+func _history_for(mentor_id: String) -> Array:
+	return (_history.get(mentor_id, []) as Array).duplicate()
+
+
+# 记一轮真实问答，超出硬上限裁掉最早轮（防长期会话记忆膨胀；LLMClient 还会按配置再裁）。
+func _record_round(mentor_id: String, question: String, answer: String) -> void:
+	var rounds: Array = _history.get(mentor_id, []) as Array
+	rounds.append({H_QUESTION: question, H_ANSWER: answer})
+	if rounds.size() > HISTORY_ROUND_LIMIT:
+		rounds = rounds.slice(rounds.size() - HISTORY_ROUND_LIMIT, rounds.size())
+	_history[mentor_id] = rounds
+
+
+func _provider_text(out: Variant) -> String:
+	if typeof(out) == TYPE_DICTIONARY:
+		var reply: Dictionary = out
+		_last_offline = bool(reply.get(KEY_OFFLINE, false))
+		return str(reply.get(KEY_TEXT, ""))
+	var text: String = str(out)
+	_last_offline = text.strip_edges().is_empty()
+	return text
 
 
 func _llm_client() -> Object:

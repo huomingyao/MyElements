@@ -112,14 +112,16 @@
 ]
 ```
 
+（示例节录；实际表共 **9 条**：`no_match` 5 条 + `wrong_condition` 4 条，全量见 [SPEC-05 §2](SPEC-05-内容数据表.md) 失败反馈表。其中 `fail_copper_acid` 为彩蛋条目：仅铜+酸类组合触发，不参与通用 `no_match` 轮转。）
+
 约束：
 - `reason` 取 `no_match/wrong_condition`；id 唯一，`fail_` 前缀。
 - **每个 reason 池至少 2 条**（硬约束，2026-08-02 补）：`try_craft` 按 reason 做确定性轮转取用，池内只有 1 条时 FR-G-07 AC2「连续两次同类失败文案不同」不可满足。判定口径见 [SPEC-01 FR-G-07](SPEC-01-需求与验收.md)。
-- 这些 id **不进 `tips.json`**（失败池与 47 条字幕表互不重叠）；显示时由调用方 `RecipeDB.get_fail_message(id)` 取 text 再走 `KnowledgeTip.show_custom()`。
+- 这些 id **不进 `tips.json`**（失败池与 51 条字幕表互不重叠）；显示时由调用方 `RecipeDB.get_fail_message(id)` 取 text 再走 `KnowledgeTip.show_custom()`。
 
 ---
 
-## 4. tips.json（47 条 → FR-D-03）
+## 4. tips.json（51 条 → FR-D-03）
 
 ```json
 [

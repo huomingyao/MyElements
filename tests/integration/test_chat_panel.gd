@@ -9,6 +9,7 @@ const Fixture: GDScript = preload("res://tests/data/json_fixture.gd")
 const RouterScript: GDScript = preload("res://scripts/mentor/mentor_router.gd")
 
 const PANEL_PATH: String = "res://scenes/mentor/chat_panel.tscn"
+const UI_MANAGER_SCRIPT: String = "res://scenes/main/ui_manager.gd"
 
 const N_AVATAR: String = "MentorAvatar"
 const N_NAME: String = "MentorName"
@@ -17,6 +18,7 @@ const N_LIST: String = "HistoryList"
 const N_INPUT: String = "InputLine"
 const N_SEND: String = "SendButton"
 const N_CLOSE: String = "CloseButton"
+const N_CONFIG: String = "ConfigButton"
 
 const INSTANT_SPEED: float = 100000.0
 const TYPE_TIMEOUT_FRAMES: int = 1200
@@ -38,6 +40,23 @@ class FakeClient:
 				continue
 			out += raw[i]
 		return out.strip_edges()
+
+
+# 配置面板替身：open/close/is_open 契约（SPEC-03 §8），断言设置入口的裁决行为。
+class FakeConfigPanel:
+	extends Control
+	var _open: bool = false
+
+	func open() -> void:
+		_open = true
+		visible = true
+
+	func close() -> void:
+		_open = false
+		visible = false
+
+	func is_open() -> bool:
+		return _open
 
 
 var _panel: Node = null
@@ -175,6 +194,58 @@ func test_text_grows_gradually_while_typing() -> void:
 	await _wait_typing_done()
 
 
+# 优化包C-4：打字进行中点击面板或按确认键，当前行立即显示完整文本，不再等逐字打完。
+# 输入处理是同步的：事件送达的同一帧文本就必须补全（修复前文本仍是逐字残段，断言必失败）。
+func test_click_during_typing_skips_to_full_line() -> void:
+	if _skip_unless(["open_chat", "send_text", "is_typing"]):
+		return
+	# 单条长回复：不带 @，派活对象的回复置空，保证本轮只有班主任一条。
+	_replies = {"monitor": "这是一段足够长的回复，用来验证打字机可以被跳过而立即显示完整内容，不用干等好几秒。"}
+	_panel.open_chat("monitor")
+	_panel.typing_chars_per_second = 2.0
+	_panel.submit("今天午饭吃什么")
+	await wait_process_frames(4)
+	assert_true(_panel.is_typing(), "前置：慢速下长回复应仍在逐字打字")
+	var click: InputEventMouseButton = InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.pressed = true
+	_panel._unhandled_input(click)
+	var texts: Array = _history_texts()
+	assert_false(texts.is_empty(), "应有历史记录")
+	assert_true(
+		str(texts[texts.size() - 1]).contains(str(_replies["monitor"])),
+		"点击跳过的同一帧当前行就应显示完整文本"
+	)
+	_panel.typing_chars_per_second = INSTANT_SPEED
+	await _wait_typing_done()
+	_panel.close_chat()
+
+
+# 确认键（ui_accept）同样能跳过打字。
+func test_accept_key_during_typing_skips_to_full_line() -> void:
+	if _skip_unless(["open_chat", "send_text", "is_typing"]):
+		return
+	_replies = {"monitor": "另一段足够长的回复，用来验证确认键也能跳过打字机，立即显示完整内容。"}
+	_panel.open_chat("monitor")
+	_panel.typing_chars_per_second = 2.0
+	_panel.submit("今天晚饭吃什么")
+	await wait_process_frames(4)
+	assert_true(_panel.is_typing(), "前置：慢速下应仍在逐字打字")
+	var key: InputEventAction = InputEventAction.new()
+	key.action = "ui_accept"
+	key.pressed = true
+	_panel._unhandled_input(key)
+	var texts: Array = _history_texts()
+	assert_false(texts.is_empty(), "应有历史记录")
+	assert_true(
+		str(texts[texts.size() - 1]).contains(str(_replies["monitor"])),
+		"确认键跳过的同一帧当前行就应显示完整文本"
+	)
+	_panel.typing_chars_per_second = INSTANT_SPEED
+	await _wait_typing_done()
+	_panel.close_chat()
+
+
 # AC3：对话记录放在 ScrollContainer 里（可滚动），且保留本次会话全部消息。
 func test_history_scrollable_and_keeps_whole_session() -> void:
 	if _skip_unless(["open_chat", "send_text", "history_count"]):
@@ -285,6 +356,123 @@ func test_input_placeholder_from_ui_strings() -> void:
 	var expected: String = str(Fixture.read_object("ui_strings.json").get("chat_placeholder", ""))
 	assert_false(expected.is_empty(), "ui_strings.json 应有 chat_placeholder")
 	assert_eq(input.placeholder_text, expected, "占位符应来自 ui_strings.chat_placeholder")
+
+
+# ui_manager 面板契约（SPEC-03 §8，收口 W1）：open/close/is_open 委托既有聊天方法，
+# 不改其签名；无参 open() 按「班主任首接」（FR-M-04）落到默认导师 monitor。
+# 契约缺失时 ui_manager.open("chat")/close_active() 会在运行时报错。
+func test_ui_manager_panel_contract_delegates_to_chat_methods() -> void:
+	if _skip_unless(["open", "close", "is_open", "is_chat_open"]):
+		return
+	assert_false(_panel.is_open(), "初始契约 is_open 应为假")
+	_panel.open()
+	assert_true(_panel.is_open(), "契约 open() 应打开聊天框")
+	assert_true(_panel.is_chat_open(), "open() 应委托到 open_chat")
+	assert_true(_panel.visible, "打开后应可见")
+	var name_label: Label = _node(N_NAME) as Label
+	if name_label != null:
+		var monitor_name: String = _mentor_name("monitor")
+		assert_false(monitor_name.is_empty(), "mentors.json 应有 monitor（班主任）")
+		assert_true(name_label.text.contains(monitor_name),
+			"无参 open() 应按班主任首接落到 monitor（FR-M-04）：%s" % name_label.text)
+	_panel.close()
+	assert_false(_panel.is_open(), "契约 close() 应关闭聊天框")
+	assert_false(_panel.is_chat_open(), "close() 应委托到 close_chat")
+	assert_false(_panel.visible, "关闭后应隐藏")
+
+
+# ==== 包A-3：设置入口（FR-M-10 可达性）====
+
+# 在带 UILayer/UIManager 的世界骨架里新挂一个聊天框（裁决查找按祖先链，须先入骨架再 _ready）。
+func _spawn_rig_with_panel() -> Dictionary:
+	var rig: Node = Node.new()
+	add_child_autofree(rig)
+	var ui_layer: Node = Node.new()
+	ui_layer.name = "UILayer"
+	rig.add_child(ui_layer)
+	var manager: Node = (load(UI_MANAGER_SCRIPT) as GDScript).new()
+	manager.name = "UIManager"
+	ui_layer.add_child(manager)
+	var client: Node = FakeClient.new()
+	rig.add_child(client)
+	var router: RefCounted = RouterScript.new()
+	router.set_reply_provider(func(_m: String, _q: String) -> String: return "回复")
+	var panel: Node = (load(PANEL_PATH) as PackedScene).instantiate()
+	panel.set_client(client)
+	panel.set_router(router)
+	panel.typing_chars_per_second = INSTANT_SPEED
+	rig.add_child(panel)
+	return {"rig": rig, "manager": manager, "panel": panel}
+
+
+# 设置按钮经 ui_manager 打开 config 面板；互斥：config 打开时聊天框被关掉（SPEC-03 §8）。
+func test_config_button_opens_config_panel_via_ui_manager() -> void:
+	var rig: Dictionary = _spawn_rig_with_panel()
+	await wait_process_frames(1)
+	var manager: Node = rig["manager"]
+	var panel: Node = rig["panel"]
+	var config: Control = FakeConfigPanel.new()
+	add_child_autofree(config)
+	manager.register_panel("chat", panel, false)
+	manager.register_panel("config", config, true)
+	manager.open("chat")
+	assert_true(manager.is_open("chat"), "前提：聊天框经 ui_manager 打开")
+	var button: Node = panel.get_node_or_null(^"%ConfigButton")
+	assert_not_null(button, "聊天框应有 %%ConfigButton 设置入口（FR-M-10 可达性）")
+	if button == null:
+		return
+	button.pressed.emit()
+	assert_true(manager.is_open("config"), "设置按钮应经 ui_manager 打开 config 面板")
+	assert_true((config as FakeConfigPanel).is_open(), "config 面板应被打开")
+	assert_false(panel.is_chat_open(), "互斥：config 打开时聊天框应被 ui_manager 关掉（SPEC-03 §8）")
+
+
+# 设置按钮文案来自 ui_strings.chat_config（NFR-04）。
+func test_config_button_text_comes_from_ui_strings() -> void:
+	if _panel == null:
+		return
+	var button: Node = _node(N_CONFIG)
+	if button == null:
+		return
+	var expected: String = str(Fixture.read_object("ui_strings.json").get("chat_config", ""))
+	assert_false(expected.is_empty(), "ui_strings.json 应有 chat_config")
+	assert_eq(str(button.get("text")), expected, "设置按钮文案应来自 ui_strings.chat_config")
+
+
+# 无 ui_manager（独立实例化）时按设置按钮不崩溃、不改变聊天框状态。
+func test_config_button_is_safe_without_ui_manager() -> void:
+	if _skip_unless(["open_chat", "is_chat_open"]):
+		return
+	_panel.open_chat("chem")
+	var button: Node = _node(N_CONFIG)
+	if button == null:
+		return
+	button.pressed.emit()
+	assert_true(_panel.is_chat_open(), "无裁决器时设置按钮不应影响聊天框")
+
+
+# pending 导师（包A-4）：academy 注入被交互的导师后，无参 open() 以该导师开场；
+# 未注入时维持原语义——班主任首接（FR-M-04）。
+func test_pending_mentor_is_consumed_by_open() -> void:
+	if _skip_unless(["open", "is_open", "set_pending_mentor"]):
+		return
+	_panel.set_pending_mentor("chem")
+	_panel.open()
+	var name_label: Label = _node(N_NAME) as Label
+	if name_label != null:
+		assert_true(
+			name_label.text.contains(_mentor_name("chem")),
+			"pending 导师应作为开场导师：%s" % name_label.text
+		)
+	_panel.close()
+	# 消费即清：再次 open() 落回班主任首接。
+	_panel.open()
+	if name_label != null:
+		assert_true(
+			name_label.text.contains(_mentor_name("monitor")),
+			"pending 消费后应落回班主任首接（FR-M-04）：%s" % name_label.text
+		)
+	_panel.close()
 
 
 # NFR-04：导师场景全部逻辑脚本零中文字面量（诊断日志与注释除外，按 SPEC-01 §10 口径）。

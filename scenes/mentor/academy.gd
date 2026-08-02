@@ -12,6 +12,9 @@ const ZONE_ID: String = "academy"
 const ROOM_META: String = "room"
 const ANCHOR_NAME: String = "Anchor"
 const GAME_MANAGER_PATH: NodePath = ^"/root/GameManager"
+# 世界总装里的裁决器（SPEC-03 §8：world.tscn 的 UILayer/UIManager），按祖先链惰性解析。
+const UI_MANAGER_REL: NodePath = ^"UILayer/UIManager"
+const PANEL_CHAT: String = "chat"
 
 # ==== 状态区 ====
 @onready var _rooms: Node2D = %Rooms
@@ -60,4 +63,23 @@ func _on_zone_body_entered(body: Node) -> void:
 
 
 func _on_mentor_asked(mentor_id: String) -> void:
-	_chat.open_chat(mentor_id)
+	var manager: Node = _find_ui_manager()
+	if manager == null:
+		# 独立实例化（无 ui_manager，如单测）时退回直连，保持旧行为。
+		_chat.open_chat(mentor_id)
+		return
+	# 经 ui_manager 打开（SPEC-03 §8 互斥裁决，包A-4）：被交互的导师经 pending
+	# 传给聊天框，chat 注册为 blocks_input=false（FR-M-02 AC1：世界不暂停）。
+	_chat.set_pending_mentor(mentor_id)
+	manager.open(PANEL_CHAT)
+
+
+# 沿祖先链找世界总装里的 UIManager；独立实例化（测试）时找不到返回 null。
+func _find_ui_manager() -> Node:
+	var node: Node = self
+	while node != null:
+		var candidate: Node = node.get_node_or_null(UI_MANAGER_REL)
+		if candidate != null and candidate.has_method("open"):
+			return candidate
+		node = node.get_parent()
+	return null

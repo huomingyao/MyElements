@@ -146,3 +146,41 @@ func test_light_only_in_darkness() -> void:
 	gm.set_zone("mine")
 	await wait_physics_frames(3)
 	assert_true(light.enabled, "矿洞内即使白天也应开灯")
+
+
+# ==== 包A-4/包A-8：相机传送收敛与震动 ====
+
+# 包A-4：提供传送后的平滑收敛封装（内部走 reset_smoothing）。
+func test_camera_has_snap_to_target() -> void:
+	if _player == null:
+		return
+	var cam: Camera2D = _camera()
+	if cam == null:
+		return
+	assert_true(cam.has_method("snap_to_target"), "相机应提供 snap_to_target()（传送后收敛平滑）")
+	cam.snap_to_target() # 调用不报错即可
+
+
+# 包A-8：shake(intensity, duration) 震动中 offset 非零且不超强度，结束精确复位；
+# 连续两次震动（新震动打断旧震动）后仍能复位。
+func test_shake_offsets_and_recovers() -> void:
+	if _player == null:
+		return
+	var cam: Camera2D = _camera()
+	if cam == null:
+		return
+	assert_true(cam.has_method("shake"), "相机应提供 shake(intensity, duration)")
+	if not cam.has_method("shake"):
+		return
+	cam.shake(3.0, 0.2)
+	await wait_process_frames(2)
+	var offset_len: float = cam.offset.length()
+	assert_gt(offset_len, 0.1, "震动中 offset 应非零")
+	assert_true(offset_len <= 3.01, "震动幅度不应超过 intensity：%s" % offset_len)
+	await wait_seconds(0.4)
+	assert_eq(cam.offset, Vector2.ZERO, "震动结束后 offset 应精确复位")
+	cam.shake(2.0, 0.1)
+	await wait_process_frames(1)
+	cam.shake(2.0, 0.1) # 新震动打断旧震动
+	await wait_seconds(0.3)
+	assert_eq(cam.offset, Vector2.ZERO, "连续震动后 offset 仍应复位")

@@ -21,7 +21,16 @@ const EFFECT_KILL_ACID: String = "kill_acid"
 const EFFECT_KILL_CO: String = "kill_co"
 const EFFECT_RESTORE_OXYGEN: String = "restore_oxygen"
 const EFFECT_RESTORE_ENERGY: String = "restore_energy"
+const EFFECT_EXTINGUISH: String = "extinguish"
+const EFFECT_TEST_HARDWATER: String = "test_hardwater"
 const EFFECT_NONE: String = "none"
+
+# 硬水鉴别（肥皂水）只在盐湖湖水区域生效（FR-G-12 边界 / FR-G-14 AC3：对湖水使用）。
+const ZONE_SALTLAKE: String = "saltlake"
+
+# items.json 未配 tip_id 的效果的兜底字幕（数据表冻结不改表；条目必须已存在于 tips.json）。
+# 灭火器原理：碳酸氢钠+酸快速产生 CO2 隔绝氧气灭火（SPEC-05 R10），复用 tip_co2。
+const FALLBACK_TIP_EXTINGUISH: String = "tip_co2"
 
 # use_item 返回字典的键名（调用方约定，同 RecipeDB.try_catch 的风格）。
 const R_SUCCESS: String = "success"
@@ -129,11 +138,18 @@ func use_item(item_id: String, inventory: RefCounted, target: Node = null) -> Di
 		return result
 	var effect: String = str(item.get(KEY_EFFECT, EFFECT_NONE))
 	var tip_id: String = str(item.get(KEY_TIP, ""))
+	# 数据表没配字幕的效果用代码兜底，保证消耗型道具不会零反馈（灭火器连字幕都没有的漏洞）。
+	if tip_id.is_empty() and effect == EFFECT_EXTINGUISH:
+		tip_id = FALLBACK_TIP_EXTINGUISH
 	result[R_EFFECT] = effect
 	result[R_TIP] = tip_id
 	result[R_VALUE] = effect_value(item_id)
 	var type: String = str(item.get(KEY_TYPE, ""))
 	if type == TYPE_EQUIP:
+		# 先校验持有再装备：隔空装备漏洞（未持有也能 equip）的修复。
+		if inventory == null or not inventory.has_item(item_id, 1):
+			result[R_REASON] = "not_in_inventory"
+			return result
 		result[R_SUCCESS] = equip(item_id)
 		return result
 	if type != TYPE_CONSUME or effect == EFFECT_NONE:
@@ -146,6 +162,10 @@ func use_item(item_id: String, inventory: RefCounted, target: Node = null) -> Di
 	if effect == EFFECT_KILL_CO and (target == null or not target.has_method("hit_by_carbon")):
 		result[R_REASON] = "no_target"
 		return result
+	# 肥皂水位置校验：仅盐湖湖水区域可鉴别硬水；他处不消耗、不播硬水字幕（包B-A5）。
+	if effect == EFFECT_TEST_HARDWATER and _current_zone() != ZONE_SALTLAKE:
+		result[R_REASON] = "wrong_place"
+		return result
 	if inventory == null or not inventory.has_item(item_id, 1):
 		result[R_REASON] = "not_in_inventory"
 		return result
@@ -157,7 +177,8 @@ func use_item(item_id: String, inventory: RefCounted, target: Node = null) -> Di
 
 
 # 结算效果本身。extinguish / test_hardwater 的剧情与设施钩子由后续任务包接线，
-# 本任务包只负责消耗语义与字幕（FR-G-12 AC2）。
+# 本任务包只负责消耗语义与字幕（FR-G-12 AC2）：两者的即时反馈是 use_item 播的字幕
+# （灭火器兜底 tip_co2，肥皂水走 items.json 的 sys_hardwater），这里显式占位防漏配。
 func _apply_effect(effect: String, value: float, target: Node) -> void:
 	var gm: Node = _game_manager()
 	match effect:
@@ -171,6 +192,10 @@ func _apply_effect(effect: String, value: float, target: Node) -> void:
 			target.hit_by_spray()
 		EFFECT_KILL_CO:
 			target.hit_by_carbon()
+		EFFECT_EXTINGUISH:
+			pass # 火灾剧情钩子未接线；反馈为字幕，见函数头注释。
+		EFFECT_TEST_HARDWATER:
+			pass # 硬水鉴别剧情钩子未接线；反馈为字幕，见函数头注释。
 
 
 func _show_tip(tip_id: String) -> void:
@@ -185,6 +210,14 @@ func _show_tip(tip_id: String) -> void:
 
 func _game_manager() -> Node:
 	return _autoload(^"GameManager")
+
+
+# 当前区域（位置校验用）：GameManager 缺失时返回空串，按「不在盐湖」安全拒绝。
+func _current_zone() -> String:
+	var gm: Node = _game_manager()
+	if gm == null:
+		return ""
+	return str(gm.current_zone())
 
 
 func _knowledge_tip() -> Node:

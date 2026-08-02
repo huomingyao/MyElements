@@ -116,6 +116,30 @@ func test_first_entry_shows_zone_tip_once() -> void:
 	assert_eq(tip.current_tip_id(), "", "重回矿洞不应有字幕在显示")
 
 
+# A4 回归（FR-C-03 AC3）：全新会话的第一次 set_zone("grassland") 必须发 zone_changed 并播出生区横幅。
+# 此前 _zone 初值即 "grassland"，world._reset_run 的首次定位被同区去重吞掉，出生区横幅永不播。
+func test_first_zone_assignment_emits_signal_and_tip() -> void:
+	tip.load_from([
+		{"id": "zone_grass", "text": "空气的成分", "style": "banner", "duration": 4.0},
+	])
+	var script: GDScript = load("res://scripts/autoload/game_manager.gd") as GDScript
+	assert_not_null(script, "game_manager.gd 应可加载")
+	if script == null:
+		return
+	# 另起一个全新实例模拟开局（共享 autoload 的 _zone 已被其他测试写过，无法代表首局）。
+	var fresh: Node = script.new()
+	add_child_autofree(fresh)
+	watch_signals(fresh)
+	watch_signals(tip)
+	fresh.set_zone("grassland")
+	assert_signal_emitted_with_parameters(fresh, "zone_changed", ["grassland"])
+	assert_eq(tip.current_tip_id(), "zone_grass", "首次进入草原应立即播出 zone_grass 横幅（A4）")
+	# 同区去重仍然成立：紧接着重复 set_zone 不再发信号。
+	fresh.set_zone("grassland")
+	assert_signal_emit_count(fresh, "zone_changed", 1, "重复 set_zone 同区不应再发信号")
+	tip.reload() # 收尾：恢复真实字幕表，避免污染后续测试文件共享的 KnowledgeTip
+
+
 # 区域字幕 id 必须来自映射表，逻辑代码里不许出现中文字面量（NFR-04）。
 func test_zone_tip_ids_are_data_driven() -> void:
 	for zone_id: String in gm.ZONE_IDS:

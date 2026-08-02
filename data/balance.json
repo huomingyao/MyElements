@@ -40,12 +40,14 @@
   "monsters": {
     "co_ghost_speed": 28.0,
     "acid_mist_speed": 90.0,
+    "acid_mist_lifetime_seconds": 200.0,
     "acid_mist_night_count_min": 2,
     "acid_mist_night_count_max": 3
   },
   "items": {
     "oxygen_tank_restore": 50.0,
     "campfire_meal_restore": 40.0,
+    "campfire_daily_limit": 3,
     "trade_energy_restore": 20.0
   },
   "inventory": {

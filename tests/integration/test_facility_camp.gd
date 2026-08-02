@@ -9,6 +9,10 @@ const ELECTROLYZER_SCENE: String = "res://scenes/gameplay/facility_electrolyzer.
 const CAMPFIRE_SCENE: String = "res://scenes/gameplay/facility_campfire.tscn"
 const INVENTORY_SCRIPT: String = "res://scripts/gameplay/inventory.gd"
 
+# 字幕队列冲刷时长（秒）：新语义下入队≠已展示（_shown 在 _start 标记），
+# 断言前一次性推进足够清空排队横幅（单条最长 warning 5s）。
+const TIP_FLUSH_SECONDS: float = 60.0
+
 var gm: Node = null
 var tip: Node = null
 var recipe_db: Node = null
@@ -143,6 +147,54 @@ func test_campfire_meal_clamps_at_energy_max() -> void:
 	gm.energy = 90.0
 	campfire.interact(player)
 	assert_almost_eq(gm.energy, gm.energy_max, 0.001, "能量不应超过上限")
+
+
+# 包B修复4：篝火进食每日限次——次数读 balance items.campfire_daily_limit，
+# 达到上限不再加能量并给字幕反馈（不再无限免费进食）。
+func test_campfire_meal_daily_limit_from_balance() -> void:
+	var campfire: Node = _spawn(CAMPFIRE_SCENE)
+	if campfire == null:
+		return
+	if not campfire.has_method("meals_today"):
+		fail_test("篝火应暴露 meals_today() 供断言（包B修复4）")
+		return
+	var player: FakePlayer = _make_player()
+	var limit: int = int(gm.get_balance("items.campfire_daily_limit", -1))
+	assert_eq(limit, 3, "balance 交叉验证：篝火每日限 3 次")
+	var meal: float = float(gm.get_balance("items.campfire_meal_restore", -1.0))
+	for i: int in limit:
+		gm.energy = 10.0
+		campfire.interact(player)
+		assert_almost_eq(gm.energy, 10.0 + meal, 0.001, "第 %d 次进食应生效" % (i + 1))
+	assert_eq(int(campfire.meals_today()), limit, "进食计数应等于上限")
+	gm.energy = 10.0
+	campfire.interact(player)
+	assert_almost_eq(gm.energy, 10.0, 0.001, "达到上限后不应再加能量")
+	assert_eq(int(campfire.meals_today()), limit, "达到上限后计数不应再涨")
+	# 新语义（包C-3）：入队≠已展示；sys_sleep 排在进食字幕之后，结算队列后再断言。
+	tip.advance(TIP_FLUSH_SECONDS)
+	assert_true(tip.is_shown("sys_sleep"), "达到上限应提示睡一觉明天再来（sys_sleep）")
+
+
+# 包B修复4：跨天重置——day_started 信号清零当日进食计数，之后可再次进食。
+func test_campfire_meal_count_resets_on_new_day() -> void:
+	var campfire: Node = _spawn(CAMPFIRE_SCENE)
+	if campfire == null:
+		return
+	if not campfire.has_method("meals_today"):
+		fail_test("篝火应暴露 meals_today() 供断言（包B修复4）")
+		return
+	var player: FakePlayer = _make_player()
+	var limit: int = int(gm.get_balance("items.campfire_daily_limit", 3))
+	var meal: float = float(gm.get_balance("items.campfire_meal_restore", -1.0))
+	for i: int in limit:
+		campfire.interact(player)
+	assert_eq(int(campfire.meals_today()), limit, "前置：计数达到上限")
+	gm.day_started.emit(2)
+	assert_eq(int(campfire.meals_today()), 0, "跨天后进食计数应清零")
+	gm.energy = 10.0
+	campfire.interact(player)
+	assert_almost_eq(gm.energy, 10.0 + meal, 0.001, "跨天后应可再次进食")
 
 
 # AC3：篝火旁边生命缓慢回复（balance stats.health_regen_campfire = 1.0/s）。

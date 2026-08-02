@@ -1,7 +1,8 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scenes/mentor/academy.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/mentor/chat_panel.tscn" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/mentor/config_panel.tscn" id="3"]
 
 [sub_resource type="RectangleShape2D" id="zone"]
 size = Vector2(720, 260)
@@ -47,3 +48,5 @@ shape = SubResource("zone")
 
 [node name="ChatPanel" parent="ChatLayer" instance=ExtResource("2")]
 unique_name_in_owner = true
+
+[node name="ConfigPanel" parent="ChatLayer" instance=ExtResource("3")]

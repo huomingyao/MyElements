@@ -1,15 +1,19 @@
-# UT-D05 / FR-D-05：qa_fallback.json ≥20 条（当前 25 条）、answer 非空、
+# UT-D05 / FR-D-05：qa_fallback.json ≥20 条（当前 34 条）、answer 非空、
 # 涉及反应的答案含化学方程式。
 # 断言依据：SPEC-04 §7 校验规则 + SPEC-05 §5 内容表。
-# 第 25 条是零命中兜底行：keywords 为空数组，永不参与包含匹配（SPEC-04 §7 兜底行约定），
+# 末行是零命中兜底行：keywords 为空数组，永不参与包含匹配（SPEC-04 §7 兜底行约定），
 # 它的存在让零命中话术也留在数据表里，不必硬编码进代码（NFR-04）。
+# 包D（对标优化）：think/assistant/monitor 各补 3 条离线问答，离线模式下非化学导师人设不崩。
 extends GutTest
 
 const Fixture: GDScript = preload("res://tests/data/json_fixture.gd")
 
 const MIN_COUNT: int = 20
-const EXPECTED_COUNT: int = 25
+const EXPECTED_COUNT: int = 34
 const MENTOR_IDS: Array[String] = ["chem", "monitor", "assistant", "think"]
+# 包D：三位非化学导师的可命中条目数下限（含新增，不含兜底行口径）。
+const NON_CHEM_MIN_ROWS: int = 3
+const NON_CHEM_MENTORS: Array[String] = ["think", "assistant", "monitor"]
 const OFFLINE_BADGE: String = "（离线模式）"
 const EQUATION_MARKS: Array[String] = ["=", "→"]
 
@@ -17,13 +21,17 @@ const EQUATION_MARKS: Array[String] = ["=", "→"]
 const FALLBACK_ID: String = "qa_no_match"
 const FALLBACK_MENTOR_ID: String = "monitor"
 
-# SPEC-05 §5 表格顺序（22 条化学知识 + 2 条战斗补充 + 1 条零命中兜底）。
+# SPEC-05 §5 表格顺序 + 包D 新增（22 条化学 + 2 条战斗 + 9 条包D + 1 条零命中兜底）。
 const SPEC_IDS: Array[String] = [
 	"qa_h2_explosion", "qa_o2", "qa_co", "qa_burn_condition", "qa_extinguish",
 	"qa_water_purify", "qa_electrolysis", "qa_catalyst", "qa_metal_activity", "qa_rust",
 	"qa_neutralize", "qa_ph", "qa_co2_test", "qa_metathesis", "qa_mass_conservation",
 	"qa_nutrition", "qa_hardwater", "qa_salt_purify", "qa_allotrope", "qa_air",
-	"qa_make_o2", "qa_next_step", "qa_fight_co", "qa_fight_acid", "qa_no_match",
+	"qa_make_o2", "qa_next_step", "qa_fight_co", "qa_fight_acid",
+	"qa_fight_night", "qa_fight_fire", "qa_study_method",
+	"qa_low_oxygen", "qa_first_day", "qa_where_mine",
+	"qa_monitor_lost", "qa_monitor_giveup", "qa_monitor_codex",
+	"qa_no_match",
 ]
 
 # SPEC-05 §5：id -> [keywords..., mentor_id]，关键词按表中「/」拆分。
@@ -52,6 +60,15 @@ const SPEC_KEYWORDS_MENTOR: Dictionary = {
 	"qa_next_step": [["下一步", "怎么办", "该做什么"], "assistant"],
 	"qa_fight_co": [["CO幽灵", "幽灵", "灰色怪"], "think"],
 	"qa_fight_acid": [["酸雾", "酸雾怪", "黄绿"], "think"],
+	"qa_fight_night": [["夜晚", "天黑", "看不见"], "think"],
+	"qa_fight_fire": [["着火", "火灾", "火了"], "think"],
+	"qa_study_method": [["记不住", "背不下", "怎么记"], "think"],
+	"qa_low_oxygen": [["氧气不够", "缺氧", "氧气"], "assistant"],
+	"qa_first_day": [["第一天", "开局", "新手"], "assistant"],
+	"qa_where_mine": [["矿洞", "挖矿", "矿石"], "assistant"],
+	"qa_monitor_lost": [["迷茫", "不知道干什么", "迷路"], "monitor"],
+	"qa_monitor_giveup": [["太难", "想放弃", "玩不下去"], "monitor"],
+	"qa_monitor_codex": [["图鉴", "收集", "进度"], "monitor"],
 }
 
 # SPEC-05 §5 中明确写出方程式的条目（答案必须含该方程式原文）。
@@ -63,6 +80,7 @@ const SPEC_EQUATIONS: Dictionary = {
 	"qa_neutralize": "HCl+NaOH=NaCl+H₂O",
 	"qa_co2_test": "CO₂+Ca(OH)₂=CaCO₃↓+H₂O",
 	"qa_fight_acid": "HCl+NaOH=NaCl+H₂O",
+	"qa_fight_fire": "NaHCO₃+HCl=NaCl+H₂O+CO₂↑",
 }
 
 var _rows: Array[Dictionary] = []
@@ -76,10 +94,23 @@ func before_each() -> void:
 		_by_id[str(row.get("id", ""))] = row
 
 
-# AC1：条目数 ≥20，当前内容表提供 25 条（24 条可命中 + 1 条兜底）。
+# AC1：条目数 ≥20，当前内容表提供 34 条（33 条可命中 + 1 条兜底）。
 func test_qa_count_at_least_twenty_and_matches_spec() -> void:
 	assert_gte(_rows.size(), MIN_COUNT, "qa_fallback.json 至少 20 条")
-	assert_eq(_rows.size(), EXPECTED_COUNT, "SPEC-05 §5 当前提供 25 条")
+	assert_eq(_rows.size(), EXPECTED_COUNT, "SPEC-05 §5 当前提供 34 条")
+
+
+# 包D：think/assistant/monitor 三位导师的可命中条目各 ≥3 条（离线人设不崩）。
+func test_non_chem_mentors_each_have_at_least_three_rows() -> void:
+	var by_mentor: Dictionary = {}
+	for row in _rows:
+		var mentor_id: String = str(row.get("mentor_id", ""))
+		by_mentor[mentor_id] = int(by_mentor.get(mentor_id, 0)) + 1
+	for mentor_id in NON_CHEM_MENTORS:
+		assert_gte(
+			int(by_mentor.get(mentor_id, 0)), NON_CHEM_MIN_ROWS,
+			"%s 的离线问答应 ≥%d 条（包D：离线模式下人设不崩）" % [mentor_id, NON_CHEM_MIN_ROWS]
+		)
 
 
 # AC1：id 唯一，且集合与 SPEC-05 §5 一致。

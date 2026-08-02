@@ -119,6 +119,28 @@ func test_bars_have_no_process_polling() -> void:
 		assert_false(stripped.contains("_process"), "HUD 不许轮询三值（FR-C-07 AC1）：%s" % stripped)
 
 
+# FR-C-07：三条数值条有针对性标注（氧气/体力/生命），文案来自 ui_strings.json（NFR-04）。
+func test_bar_labels_come_from_ui_strings() -> void:
+	if _skip_unless_ready():
+		return
+	var strings: Dictionary = Fixture.read_object("ui_strings.json")
+	var cases: Array = [
+		["OxygenLabel", "hud_oxygen"],
+		["EnergyLabel", "hud_energy"],
+		["HealthLabel", "hud_health"],
+	]
+	for pair in cases:
+		var label: Label = _node(str(pair[0])) as Label
+		if label == null:
+			continue
+		var expected: String = str(strings.get(str(pair[1]), ""))
+		assert_false(expected.is_empty(), "ui_strings.json 应有 %s" % str(pair[1]))
+		assert_eq(str(label.text), expected, "%s 文案应取自 ui_strings.%s" % [str(pair[0]), str(pair[1])])
+	assert_eq(str(_node("OxygenLabel").text), "氧气", "氧气条标注应为「氧气」")
+	assert_eq(str(_node("EnergyLabel").text), "体力", "体力条标注应为「体力」")
+	assert_eq(str(_node("HealthLabel").text), "生命", "生命条标注应为「生命」")
+
+
 # AC2：「已收集 N/16」随计数更新，格式串来自 ui_strings.json（NFR-04）。
 func test_collected_counter_uses_ui_strings_format() -> void:
 	if _skip_unless_ready(["set_collected"]):
@@ -207,6 +229,38 @@ func test_low_oxygen_flashes_and_warns_once_per_episode() -> void:
 	_tip.clear_queue() # 清掉上一条，让下一条能立即上台发 tip_shown
 	_set_oxygen(threshold - 1.0)
 	assert_eq(_low_tip_count, 2, "回到安全后再次低氧应重新提醒一次")
+
+
+# 受伤闪烁（对标 2D-Mining-Sandbox player_ui.hurt_effect）：hp 下降时血条透明↔白闪 3 次；
+# 首次同步与回血不触发；闪烁自然结束后透明度复位（Tween 收尾与低氧闪烁同一模式）。
+func test_hurt_flash_triggers_on_health_drop_only() -> void:
+	if _skip_unless_ready(["is_hurt_flashing"]):
+		return
+	assert_false(_hud.is_hurt_flashing(), "进场首次同步不应触发受伤闪烁")
+	_gm.modify_health(-10.0)
+	assert_true(_hud.is_hurt_flashing(), "hp 下降应触发受伤闪烁")
+	await wait_seconds(0.8) # 3 次 × 0.2s = 0.6s，留余量
+	assert_false(_hud.is_hurt_flashing(), "闪烁 3 次后应自然结束")
+	var bar: ProgressBar = _node("HealthBar") as ProgressBar
+	if bar != null:
+		assert_almost_eq(bar.modulate.a, 1.0, 0.001, "闪烁结束后血条透明度应复位为 1")
+	_gm.modify_health(10.0)
+	assert_false(_hud.is_hurt_flashing(), "回血不应触发受伤闪烁")
+
+
+# 连续掉血重触发：旧 Tween 被杀掉重启，结束后仍复位干净（不留残影、不叠加）。
+func test_hurt_flash_retrigger_resets_cleanly() -> void:
+	if _skip_unless_ready(["is_hurt_flashing"]):
+		return
+	_gm.modify_health(-5.0)
+	assert_true(_hud.is_hurt_flashing(), "首次掉血应闪烁")
+	_gm.modify_health(-5.0)
+	assert_true(_hud.is_hurt_flashing(), "连续掉血应重触发闪烁")
+	await wait_seconds(0.8)
+	assert_false(_hud.is_hurt_flashing(), "重触发后仍应自然结束")
+	var bar: ProgressBar = _node("HealthBar") as ProgressBar
+	if bar != null:
+		assert_almost_eq(bar.modulate.a, 1.0, 0.001, "重触发结束后透明度应复位为 1")
 
 
 # AC3：阈值读自 balance.json——边界恰好等于阈值时不报警，低于才报警。

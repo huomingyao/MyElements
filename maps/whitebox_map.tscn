@@ -110,6 +110,10 @@ metadata/substance_id = "caoh2"
 position = Vector2(1160, -20)
 metadata/substance_id = "carbon_mask"
 
+[node name="SpawnNahco3" type="Marker2D" parent="CollectableSpawns"]
+position = Vector2(1200, -20)
+metadata/substance_id = "nahco3"
+
 [node name="SpawnSaltA" type="Marker2D" parent="CollectableSpawns"]
 position = Vector2(-1500, -20)
 metadata/substance_id = "crude_salt"

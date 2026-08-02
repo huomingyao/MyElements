@@ -22,6 +22,10 @@ const ACTION_TOGGLE: String = "inventory"
 
 # ==== 逻辑区 ====
 
+# 占位纹理静态共享缓存（包E）：按颜色键复用，进程内所有实例共享，
+# 不再每次 _refresh 每格 new Image/ImageTexture。
+static var _placeholder_cache: Dictionary = {}
+
 # true 时 Tab 不自行开关，只发 toggle_requested（SPEC-03 §8：互斥由 ui_manager 裁决）。
 var managed: bool = false
 
@@ -37,12 +41,21 @@ var _slots: Array = []
 class SlotButton:
 	extends Button
 	var item_id: String = ""
+	# 预览构建委托给面板（内层类拿不到外层实例方法，由 _rebuild_slots 注入）。
+	var preview_factory: Callable = Callable()
 
 	func _get_drag_data(_at_position: Vector2) -> Variant:
 		if item_id.is_empty():
 			return null
-		var preview: Label = Label.new()
-		preview.text = text
+		var count_label: Label = get_node_or_null(^"Count") as Label
+		var count_text: String = count_label.text if count_label != null else ""
+		var preview: Control = null
+		if preview_factory.is_valid():
+			preview = preview_factory.call(item_id, count_text) as Control
+		if preview == null:
+			var fallback := Label.new()
+			fallback.text = text
+			preview = fallback
 		set_drag_preview(preview)
 		return {"id": item_id}
 
@@ -143,6 +156,7 @@ func _rebuild_slots() -> void:
 		slot.name = "Slot%d" % i
 		slot.unique_name_in_owner = true
 		slot.custom_minimum_size = SLOT_MIN_SIZE
+		slot.preview_factory = make_drag_preview
 		var icon: TextureRect = TextureRect.new()
 		icon.name = "Icon"
 		icon.set_anchors_preset(Control.PRESET_CENTER)
@@ -183,6 +197,7 @@ func _refresh() -> void:
 
 
 # 图标：路径存在用真图标；缺失用 id 散列稳定色占位（同 codex_cell 的口径）。
+# 占位纹理由静态缓存按颜色键复用（不再每格新建，包E）。
 func _apply_icon(slot: SlotButton, item_id: String) -> void:
 	var icon: TextureRect = slot.get_node(^"Icon") as TextureRect
 	if item_id.is_empty():
@@ -193,17 +208,43 @@ func _apply_icon(slot: SlotButton, item_id: String) -> void:
 	if not icon_path.is_empty() and ResourceLoader.exists(icon_path):
 		tex = load(icon_path) as Texture2D
 	if tex == null:
-		tex = _placeholder_texture()
-		icon.modulate = _color_for_id(item_id)
-	else:
-		icon.modulate = Color.WHITE
+		tex = placeholder_texture_for(_color_for_id(item_id))
 	icon.texture = tex
 
 
-func _placeholder_texture() -> Texture2D:
+# 占位纹理：按颜色键静态缓存（同色复用同一实例，散列色种类有限不会无限增长）。
+static func placeholder_texture_for(color: Color) -> Texture2D:
+	var cached: Variant = _placeholder_cache.get(color)
+	if cached is Texture2D:
+		return cached
 	var image: Image = Image.create(PLACEHOLDER_SIZE, PLACEHOLDER_SIZE, false, Image.FORMAT_RGBA8)
-	image.fill(Color.WHITE)
-	return ImageTexture.create_from_image(image)
+	image.fill(color)
+	var tex: Texture2D = ImageTexture.create_from_image(image)
+	_placeholder_cache[color] = tex
+	return tex
+
+
+# 拖拽预览（包E）：占位纹理 + 数量角标（替代纯文字 Label）；数量为空白时不带角标。
+func make_drag_preview(item_id: String, count_text: String) -> Control:
+	var root: Control = Control.new()
+	root.custom_minimum_size = Vector2(PLACEHOLDER_SIZE, PLACEHOLDER_SIZE)
+	root.size = Vector2(PLACEHOLDER_SIZE, PLACEHOLDER_SIZE)
+	var icon: TextureRect = TextureRect.new()
+	icon.name = "Icon"
+	icon.set_anchors_preset(Control.PRESET_FULL_RECT)
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.texture = placeholder_texture_for(_color_for_id(item_id))
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(icon)
+	if not count_text.is_empty():
+		var badge: Label = Label.new()
+		badge.name = "Count"
+		badge.text = count_text
+		badge.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+		badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		root.add_child(badge)
+	return root
 
 
 func _color_for_id(item_id: String) -> Color:

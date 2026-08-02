@@ -8,14 +8,20 @@ extends Node2D
 signal finished()
 
 # ==== 常量区 ====
-# 表现参数（非 SPEC-02 §4 调参项）：火光亮度和时长、震屏强度。
+# 表现参数（非 SPEC-02 §4 调参项）：火光亮度和时长、震屏强度、火球/冲击波膨胀。
 const FLASH_MAX_ALPHA: float = 0.85
 const FLASH_IN_SECONDS: float = 0.06
 const FLASH_OUT_SECONDS: float = 0.45
 const SHAKE_STRENGTH: float = 14.0
+const FIREBALL_FINAL_SCALE: float = 5.0
+const SHOCKWAVE_FINAL_SCALE: float = 7.0
 
+# 视觉逻辑分离（模块化重构）：火球/冲击波是 %Visuals 下独立部件，
+# 全屏闪光留在 CanvasLayer 根层，音频进 %Audio 容器；各自 tween 独立可改。
 @onready var _flash: ColorRect = %Flash
 @onready var _boom: AudioStreamPlayer = %BoomPlayer
+@onready var _fireball: Polygon2D = %Fireball
+@onready var _shockwave: Polygon2D = %Shockwave
 
 var _shake_target: Camera2D = null
 
@@ -35,39 +41,61 @@ func bind(event: RefCounted) -> void:
 		event.connect("explosion_triggered", play)
 
 
-# 触发一次爆炸表现：火光快亮慢灭 + 相机衰减扰动 + 音效；结束后复位并发 finished。
+# 触发一次爆炸表现：全屏闪光 + 火球/冲击波 + 相机震动 + 音效；结束后复位并发 finished。
+# 三个视觉部件各自独立 tween（视觉逻辑分离），全并行，都在 total 时长内结束。
 func play() -> void:
 	if not is_inside_tree():
 		push_warning("[fx] play 需要在场景树内调用（忽略）")
 		return
 	if _boom != null and _boom.stream != null:
 		_boom.play()
-	_flash.modulate.a = 0.0
 	var total: float = FLASH_IN_SECONDS + FLASH_OUT_SECONDS
-	# 全并行：火光快亮慢灭（熄灭段延迟到点亮后），震屏覆盖整段表现。
 	var tween: Tween = create_tween()
 	tween.set_parallel(true)
-	tween.tween_property(_flash, "modulate:a", FLASH_MAX_ALPHA, FLASH_IN_SECONDS)
-	tween.tween_property(_flash, "modulate:a", 0.0, FLASH_OUT_SECONDS).set_delay(FLASH_IN_SECONDS)
-	if _shake_target != null:
-		# 随进度衰减的随机扰动（表现层随机，不参与玩法判定）。
-		tween.tween_method(_shake_step, 0.0, 1.0, total)
+	_tween_flash(tween)
+	_tween_fireball(tween, total)
+	_tween_shockwave(tween, total)
+	# 统一震屏出口（收口 W1）：不直写 camera.offset，改调相机 shake()，
+	# 与世界的受伤/爆炸震动同一通道，杜绝同帧竞争写 offset。
+	if _shake_target != null and _shake_target.has_method("shake"):
+		_shake_target.shake(SHAKE_STRENGTH, total)
 	tween.chain().tween_callback(_finish)
 
 
-func _shake_step(progress: float) -> void:
-	if _shake_target == null:
+# 全屏闪光部件：快亮慢灭（熄灭段延迟到点亮后）。
+func _tween_flash(tween: Tween) -> void:
+	if _flash == null:
 		return
-	var decay: float = 1.0 - progress
-	_shake_target.offset = Vector2(
-		randf_range(-SHAKE_STRENGTH, SHAKE_STRENGTH),
-		randf_range(-SHAKE_STRENGTH, SHAKE_STRENGTH)
-	) * decay
-
-
-# 收尾：相机精确复位、火光确保熄灭，再发 finished。
-func _finish() -> void:
-	if _shake_target != null:
-		_shake_target.offset = Vector2.ZERO
 	_flash.modulate.a = 0.0
+	tween.tween_property(_flash, "modulate:a", FLASH_MAX_ALPHA, FLASH_IN_SECONDS)
+	tween.tween_property(_flash, "modulate:a", 0.0, FLASH_OUT_SECONDS).set_delay(FLASH_IN_SECONDS)
+
+
+# 火球部件：从爆心向外膨胀并整体淡出。
+func _tween_fireball(tween: Tween, total: float) -> void:
+	if _fireball == null:
+		return
+	_fireball.modulate.a = 1.0
+	_fireball.scale = Vector2.ONE
+	tween.tween_property(_fireball, "scale", Vector2.ONE * FIREBALL_FINAL_SCALE, total)
+	tween.tween_property(_fireball, "modulate:a", 0.0, total)
+
+
+# 冲击波部件：外环扩张并整体淡出。
+func _tween_shockwave(tween: Tween, total: float) -> void:
+	if _shockwave == null:
+		return
+	_shockwave.modulate.a = 1.0
+	_shockwave.scale = Vector2.ONE
+	tween.tween_property(_shockwave, "scale", Vector2.ONE * SHOCKWAVE_FINAL_SCALE, total)
+	tween.tween_property(_shockwave, "modulate:a", 0.0, total)
+
+
+# 收尾：所有视觉部件确保熄灭后发 finished；相机复位由相机 shake() 自身收尾负责。
+func _finish() -> void:
+	_flash.modulate.a = 0.0
+	if _fireball != null:
+		_fireball.modulate.a = 0.0
+	if _shockwave != null:
+		_shockwave.modulate.a = 0.0
 	finished.emit()

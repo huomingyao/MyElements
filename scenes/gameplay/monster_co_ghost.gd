@@ -32,6 +32,11 @@ const ZONE_ACADEMY: String = "academy"
 # 免疫道具 id（FR-G-10 AC5）：装备后接触完全免疫，判定只看 equipped_ids 是否含此 id。
 const MASK_ITEM_ID: String = "carbon_mask"
 
+# 光晕呼吸（表现参数，非调参项）：只动 %Glow 子节点局部 modulate，不影响位置/物理/玩法。
+const GLOW_MODULATE_HIGH: float = 1.5
+const GLOW_MODULATE_LOW: float = 0.6
+const GLOW_PULSE_PERIOD: float = 1.1
+
 # ==== 逻辑区 ====
 
 # 目标玩家：由世界场景写入；为空时回退到 player 组查找。
@@ -40,12 +45,20 @@ var target_player: Node2D = null
 var _contacts: Array = []
 var _destroyed: bool = false
 
+# 视觉逻辑分离（模块化重构）：身体/双眼/光晕各自独立节点（%Visuals 容器下），
+# 各部件颜色与动画走独立方法，改单个部件不碰其他部件。
 @onready var _contact_area: Area2D = %ContactArea
+@onready var _body: Polygon2D = %Body
+@onready var _eye_l: Polygon2D = %EyeL
+@onready var _eye_r: Polygon2D = %EyeR
+@onready var _glow: Polygon2D = %Glow
 
 
 func _ready() -> void:
 	_contact_area.body_entered.connect(_on_contact_body_entered)
 	_contact_area.body_exited.connect(_on_contact_body_exited)
+	_apply_visuals()
+	_start_glow_pulse()
 
 
 # 生成规则（FR-G-10 AC1）：矿洞任意时间、草原仅夜晚；其余区域不出现。
@@ -170,3 +183,25 @@ func _balance_float(key: String, fallback: float) -> float:
 	if gm == null:
 		return fallback
 	return float(gm.get_balance(key, fallback))
+
+
+# 占位视觉按部件配置（P4 美术替换前的确定性配色；改单个部件色直接改这里）。
+func _apply_visuals() -> void:
+	if _body != null:
+		_body.color = Color(0.6, 0.6, 0.6, 0.5)
+	if _eye_l != null:
+		_eye_l.color = Color(0.9, 0.95, 1.0, 1.0)
+	if _eye_r != null:
+		_eye_r.color = Color(0.9, 0.95, 1.0, 1.0)
+	if _glow != null:
+		_glow.color = Color(0.6, 0.6, 0.6, 0.18)
+
+
+# 光晕呼吸（纯视觉：只动 %Glow 局部 modulate；节点 free 时随 tween 一起销毁）。
+func _start_glow_pulse() -> void:
+	if _glow == null:
+		return
+	var tween: Tween = create_tween().set_loops()
+	tween.set_parallel(true)
+	tween.tween_property(_glow, "modulate:a", GLOW_MODULATE_HIGH, GLOW_PULSE_PERIOD)
+	tween.tween_property(_glow, "modulate:a", GLOW_MODULATE_LOW, GLOW_PULSE_PERIOD).set_delay(GLOW_PULSE_PERIOD)

@@ -181,6 +181,40 @@ func test_dispatch_count_resets_per_call() -> void:
 	assert_eq(int(router.dispatch_count()), 1, "计数应每次调用重置")
 
 
+# 离线角标透传（优化包C-1）：回复来源自报离线时，即使文本非空，offline 也必须为 true——
+# 否则离线兜底（qa_fallback）的回答会被 UI 当成在线回复，离线角标漏显。
+# provider 可返回 {text, offline} 字典表达来源的在线状态；返回字符串时维持旧语义（空串=离线）。
+func test_offline_flag_follows_reply_source_not_text_emptiness() -> void:
+	if not _has("handle_message"):
+		return
+	if not _use_provider(func(mentor_id: String, _q: String) -> Dictionary:
+		return {KEY_TEXT: "离线兜底回复 %s" % mentor_id, KEY_OFFLINE: true}):
+		return
+	var messages: Array = await router.handle_message("氢气怎么合成水")
+	assert_gt(messages.size(), 0, "应有回复")
+	for message_value in messages:
+		var message: Dictionary = message_value as Dictionary
+		assert_true(
+			bool(message.get(KEY_OFFLINE, false)),
+			"来源自报离线时 offline 必须透传到每条消息（含被派导师，不许硬编码 false）：%s" % str(message)
+		)
+
+
+# 在线来源自报在线：文本非空且 offline=false 时，每条消息 offline 均为 false。
+func test_online_source_marks_all_messages_online() -> void:
+	if not _has("handle_message"):
+		return
+	if not _use_provider(func(mentor_id: String, _q: String) -> Dictionary:
+		return {KEY_TEXT: "在线回复 %s" % mentor_id, KEY_OFFLINE: false}):
+		return
+	for message_value in await router.handle_message("氢气怎么合成水"):
+		var message: Dictionary = message_value as Dictionary
+		assert_false(
+			bool(message.get(KEY_OFFLINE, true)),
+			"来源自报在线时 offline 应为 false：%s" % str(message)
+		)
+
+
 # 空输入不产生任何消息（与 FR-M-03 AC2 一致：不发起请求）。
 func test_blank_question_yields_no_messages() -> void:
 	if not _has("handle_message"):

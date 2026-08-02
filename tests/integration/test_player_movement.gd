@@ -153,3 +153,69 @@ func test_low_energy_halves_speed() -> void:
 	assert_almost_eq(
 		_player.velocity.x, _player.move_speed * multiplier, 1.0,
 		"能量归零时速度应为 move_speed × %s" % multiplier)
+
+
+# ==== 包A-5 手感：coyote time / jump buffer / 下落重力倍数 ====
+
+# 手感参数以 @export 存在且默认值合理（不写魔法数字，调参在检查器可见）。
+func test_jump_feel_params_have_sane_defaults() -> void:
+	if _player == null:
+		return
+	for param: String in ["coyote_time", "jump_buffer_time", "fall_gravity_multiplier"]:
+		assert_not_null(_player.get(param), "应有 @export %s" % param)
+	assert_gt(float(_player.get("coyote_time")), 0.0, "coyote_time 应为正")
+	assert_gt(float(_player.get("jump_buffer_time")), 0.0, "jump_buffer_time 应为正")
+	assert_gt(float(_player.get("fall_gravity_multiplier")), 1.0, "下落重力倍数应大于 1")
+
+
+# coyote time：走出平台边缘后的短暂窗口内按跳仍能起跳。
+func test_coyote_time_allows_jump_after_leaving_floor() -> void:
+	if _player == null:
+		return
+	await _settle_on_floor()
+	var ground_y: float = _player.position.y
+	var coyote: float = float(_player.get("coyote_time"))
+	# 瞬移离地（模拟走出平台边缘），等到已判定离地但仍处 coyote 窗口内再按跳。
+	_player.position.y = ground_y - 24.0
+	var airborne_frames: int = 3
+	assert_lt(float(airborne_frames) / 60.0, coyote, "测试设计：等待帧须在 coyote 窗口内")
+	await wait_physics_frames(airborne_frames)
+	assert_false(_player.is_on_floor(), "前置：此时应已离地")
+	Input.action_press("jump")
+	await wait_physics_frames(2)
+	Input.action_release("jump")
+	assert_lt(_player.velocity.y, 0.0, "coyote 窗口内按跳应起跳（垂直速度向上）")
+
+
+# jump buffer：落地前提前按跳，落地瞬间自动起跳。
+func test_jump_buffer_fires_on_landing() -> void:
+	if _player == null:
+		return
+	await _settle_on_floor()
+	var ground_y: float = _player.position.y
+	# 抬到即将落地的高度（数帧内落地，落在缓冲窗口内），提前按跳。
+	_player.position.y = ground_y - 3.0
+	Input.action_press("jump")
+	await wait_physics_frames(1)
+	Input.action_release("jump")
+	await wait_physics_frames(6)
+	assert_lt(_player.velocity.y, 0.0, "落地瞬间应触发缓冲跳跃（垂直速度向上）")
+
+
+# 下落重力倍数：自由落体的速度增量 ≈ gravity × fall_gravity_multiplier × t（测速窗口内不落地）。
+func test_fall_uses_gravity_multiplier() -> void:
+	if _player == null:
+		return
+	var mult_variant: Variant = _player.get("fall_gravity_multiplier")
+	assert_not_null(mult_variant, "应有 @export fall_gravity_multiplier")
+	if mult_variant == null:
+		return
+	var mult: float = float(mult_variant)
+	_player.position = Vector2(0.0, FLOOR_Y - 200.0) # 高空，保证测速窗口内不落地
+	await wait_physics_frames(2)
+	var v0: float = _player.velocity.y
+	var frames: int = 10
+	await wait_physics_frames(frames)
+	var dv: float = _player.velocity.y - v0
+	var expected: float = _player.gravity * mult * (float(frames) / 60.0)
+	assert_almost_eq(dv, expected, expected * 0.1, "下落段重力应乘 fall_gravity_multiplier")

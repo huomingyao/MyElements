@@ -36,6 +36,12 @@ const TORCH_ITEM_ID: String = "sulfur_torch"
 const ACTION_CODEX: String = "codex"
 const HOTKEY_PREFIX: String = "use_item_"
 
+# 相机震动（包A-8，对标 juice 超越点）：受伤小幅、爆炸中幅，强度克制不晕。
+const HURT_SHAKE_INTENSITY: float = 2.5
+const HURT_SHAKE_SECONDS: float = 0.2
+const EXPLOSION_SHAKE_INTENSITY: float = 4.5
+const EXPLOSION_SHAKE_SECONDS: float = 0.3
+
 # 区域联动字幕（SPEC-02 §4.1 / SPEC-05 §3）：矿洞呼吸提示与草原光合作用横幅。
 const ZONE_MINE: String = "mine"
 const ZONE_GRASSLAND: String = "grassland"
@@ -50,6 +56,7 @@ var _discovery: RefCounted = null
 var _hydrogen: RefCounted = null
 var _grass_ghost: Node2D = null
 var _tint_tween: Tween = null
+var _last_health: float = 0.0
 
 @onready var _player: Node2D = $Player
 @onready var _collectables: Node2D = $Collectables
@@ -127,6 +134,7 @@ func _setup_player() -> void:
 	_player.inventory = _inventory
 	_player.item_effects = _item_effects
 	_player.global_position = _resolve_spawn_point()
+	_player.reset_camera_smoothing() # 包A-4：出生点传送后相机立即对齐，不慢追
 	_player.set_map_bounds(MAP_BOUNDS)
 	_tip_layer.set_player(_player)
 	var explosion: Node = get_node_or_null(^"Explosion")
@@ -174,8 +182,10 @@ func _spawn_all_collectables() -> void:
 		var node: Node2D = packed.instantiate()
 		# 先入 id 再进树：_ready 里的记录解析需要 substance_id 已就位。
 		node.setup(substance_id)
-		_collectables.add_child(node)
+		# 包A-3：先定位再入树——collectable._ready 会以当前 y 为漂浮基准并启动 Tween，
+		# 入树后再挪位置会被 Tween 拉回错误高度（_base_y=0）。
 		node.global_position = (marker as Marker2D).global_position
+		_collectables.add_child(node)
 		node.collected.connect(_on_collectable_collected)
 
 
@@ -228,11 +238,18 @@ func _connect_signals() -> void:
 	gm.night_started.connect(_on_night_started)
 	gm.day_started.connect(_on_day_started)
 	gm.zone_changed.connect(_on_zone_changed)
+	gm.health_changed.connect(_on_health_changed)
+	_last_health = float(gm.health)
+	if _hydrogen != null and _hydrogen.has_signal("explosion_triggered"):
+		_hydrogen.explosion_triggered.connect(_on_explosion_shake)
 	if _discovery != null:
 		_discovery.substance_discovered.connect(_on_substance_discovered)
 	var bench: Node = get_node_or_null(^"Facilities/FacilityBench")
 	if bench != null and bench.has_signal("craft_requested"):
 		bench.craft_requested.connect(_on_craft_requested)
+	# 提纯三步完成的卡片接线（FR-G-14 AC2）：复用合成卡片弹窗路径。
+	if bench != null and bench.has_signal("card_ready"):
+		bench.card_ready.connect(_on_card_ready)
 	var bed: Node = get_node_or_null(^"Facilities/FacilityBed")
 	if bed != null and bed.has_signal("slept"):
 		bed.slept.connect(_on_bed_slept)
@@ -267,6 +284,7 @@ func _on_player_respawned() -> void:
 	var bed: Node = get_node_or_null(^"Facilities/FacilityBed")
 	if bed != null:
 		_player.global_position = bed.global_position
+		_player.reset_camera_smoothing() # 包A-4：横跨地图传送后相机立即对齐
 	_sync_input_block()
 
 
@@ -326,8 +344,30 @@ func _on_ui_active_changed(_active: String) -> void:
 	_sync_input_block()
 
 
-func _on_pause_toggled(_open: bool) -> void:
+# 包A-1：暂停菜单真暂停——菜单开关即场景树开关（三值 tick、怪物随之停住）；
+# 菜单本体 process_mode=ALWAYS（pause_menu.tscn），暂停后按钮仍可用。
+func _on_pause_toggled(open: bool) -> void:
+	get_tree().paused = open
 	_sync_input_block()
+
+
+# ==== 相机震动接线（包A-8） ====
+
+# 受伤相机震动：只震下降沿（回血/复位不震）；缺氧持续掉血时形成持续轻震反馈。
+func _on_health_changed(current: float, _max_value: float) -> void:
+	if current < _last_health:
+		_shake_camera(HURT_SHAKE_INTENSITY, HURT_SHAKE_SECONDS)
+	_last_health = current
+
+
+func _on_explosion_shake() -> void:
+	_shake_camera(EXPLOSION_SHAKE_INTENSITY, EXPLOSION_SHAKE_SECONDS)
+
+
+func _shake_camera(intensity: float, duration: float) -> void:
+	var camera: Node = _player.get_node_or_null(^"%Camera")
+	if camera != null and camera.has_method("shake"):
+		camera.shake(intensity, duration)
 
 
 # 屏蔽输入的合取：模态面板（ui_manager）、卡片弹窗、世界地图页、暂停菜单、死亡画面。
@@ -356,9 +396,13 @@ func _on_bed_slept() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed(ACTION_CODEX):
+		# 图鉴 C 键例外放行（包A-2）：图鉴自身是模态面板，屏蔽后 C 键将无法关闭它。
 		_codex.set_discovery(_discovery)
 		_ui_manager.toggle("codex")
 		get_viewport().set_input_as_handled()
+		return
+	# 包A-2：模态面板/卡片/地图/暂停/死亡画面打开时，快捷栏数字键不生效。
+	if bool(_player.input_blocked):
 		return
 	for i: int in range(1, 9):
 		if event.is_action_pressed("%s%d" % [HOTKEY_PREFIX, i]):

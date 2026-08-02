@@ -54,6 +54,10 @@ size_flags_horizontal = 3
 unique_name_in_owner = true
 text = ">"
 
+[node name="ConfigButton" type="Button" parent="Panel/Root/Right/Bottom"]
+unique_name_in_owner = true
+text = "?"
+
 [node name="CloseButton" type="Button" parent="Panel/Root/Right/Bottom"]
 unique_name_in_owner = true
 text = "x"

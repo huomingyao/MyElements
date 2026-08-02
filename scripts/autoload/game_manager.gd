@@ -73,7 +73,10 @@ var purity_check_unlocked: bool = false
 
 var _balance: Dictionary = {}
 var _ui_strings: Dictionary = {}
-var _zone: String = DEFAULT_ZONE
+# 初值为空串而非 DEFAULT_ZONE（A4 / FR-C-03 AC3）：首次定位必须走「区域变化」路径发 zone_changed
+# 并播出生区横幅；若初值即 grassland，world._reset_run 的首次 set_zone 会被同区去重吞掉。
+# 空串期间氧气净速率按 DEFAULT_ZONE 结算（见 oxygen_net_rate），行为与旧初值一致。
+var _zone: String = ""
 var _night: bool = false
 var _death_emitted: bool = false
 var _respawn_position: Vector2 = Vector2.ZERO
@@ -172,11 +175,13 @@ func _settle_stats(delta: float) -> void:
 
 
 # 当前区域的氧气净速率（正 = 回复，负 = 消耗）；供 HUD 与测试查询。
+# _zone 尚未首次定位（空串）时按 DEFAULT_ZONE 结算，避免读不存在的点分键。
 func oxygen_net_rate() -> float:
+	var rate_zone: String = _zone if not _zone.is_empty() else DEFAULT_ZONE
 	var drain: float = _balance_float(
-		"%s.%s" % [BAL_OXYGEN_DRAIN, _zone], FALLBACK_OXYGEN_DRAIN)
+		"%s.%s" % [BAL_OXYGEN_DRAIN, rate_zone], FALLBACK_OXYGEN_DRAIN)
 	var regen: float = 0.0
-	if SAFE_ZONES.has(_zone):
+	if SAFE_ZONES.has(rate_zone):
 		regen = _balance_float(BAL_OXYGEN_REGEN, FALLBACK_OXYGEN_REGEN)
 	return regen - drain
 

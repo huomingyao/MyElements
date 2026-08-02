@@ -15,27 +15,43 @@ const TIP_OXYGEN_TUTORIAL: String = "sys_oxygen_tutorial"
 const UI_COLLECTED_COUNTER: String = "collected_counter"
 const UI_TIME_DAY: String = "hud_day"
 const UI_TIME_NIGHT: String = "hud_night"
+# 三条数值条的针对性标注（FR-C-07，SPEC-05 §9）。
+const UI_OXYGEN_LABEL: String = "hud_oxygen"
+const UI_ENERGY_LABEL: String = "hud_energy"
+const UI_HEALTH_LABEL: String = "hud_health"
 
 # 低氧闪烁（Tween 驱动，不占 _process）。
 const FLASH_ALPHA_LOW: float = 0.35
 const FLASH_HALF_PERIOD: float = 0.4
+
+# 血条受伤闪烁（对标 2D-Mining-Sandbox player_ui.hurt_effect）：透明↔白闪 3 次。
+const HURT_FLASH_ALPHA: float = 0.0
+const HURT_FLASH_HALF_PERIOD: float = 0.1
+const HURT_FLASH_LOOPS: int = 3
 
 # ==== 逻辑区 ====
 
 var _gm: Node = null
 var _oxygen_warning: bool = false
 var _flash_tween: Tween = null
+# 受伤闪烁：_last_health < 0 表示尚未同步过（首次同步不算受伤）。
+var _hurt_tween: Tween = null
+var _last_health: float = -1.0
 # 一次性标记（FR-U-02 AC2）：跌破后回升再跌破不重复，不依赖字幕引擎的 once。
 var _tutorial_hint_shown: bool = false
 
 @onready var _oxygen_bar: ProgressBar = %OxygenBar
 @onready var _energy_bar: ProgressBar = %EnergyBar
 @onready var _health_bar: ProgressBar = %HealthBar
+@onready var _oxygen_label: Label = %OxygenLabel
+@onready var _energy_label: Label = %EnergyLabel
+@onready var _health_label: Label = %HealthLabel
 @onready var _collected_label: Label = %CollectedLabel
 @onready var _time_label: Label = %TimeLabel
 
 
 func _ready() -> void:
+	_apply_labels()
 	set_collected(0)
 	var gm: Node = get_node_or_null(^"/root/GameManager")
 	if gm != null:
@@ -44,6 +60,7 @@ func _ready() -> void:
 
 func _exit_tree() -> void:
 	_stop_flash()
+	_stop_hurt_flash()
 
 
 # 可注入的 GameManager 引用（SPEC-06 §3 可测性）：重连信号并同步一次当前值。
@@ -115,6 +132,29 @@ func _on_energy_changed(current: float, max_value: float) -> void:
 func _on_health_changed(current: float, max_value: float) -> void:
 	_health_bar.max_value = max_value
 	_health_bar.value = current
+	if _last_health >= 0.0 and current < _last_health:
+		_start_hurt_flash()
+	_last_health = current
+
+
+# 受伤闪烁与低氧闪烁同一收尾模式：kill 旧 Tween + 透明度复位，重触发不叠加。
+func _start_hurt_flash() -> void:
+	_stop_hurt_flash()
+	_hurt_tween = create_tween().set_loops(HURT_FLASH_LOOPS)
+	_hurt_tween.tween_property(_health_bar, "modulate:a", HURT_FLASH_ALPHA, HURT_FLASH_HALF_PERIOD)
+	_hurt_tween.tween_property(_health_bar, "modulate:a", 1.0, HURT_FLASH_HALF_PERIOD)
+
+
+func _stop_hurt_flash() -> void:
+	if _hurt_tween != null and _hurt_tween.is_valid():
+		_hurt_tween.kill()
+	_hurt_tween = null
+	if is_instance_valid(_health_bar):
+		_health_bar.modulate.a = 1.0
+
+
+func is_hurt_flashing() -> bool:
+	return _hurt_tween != null and _hurt_tween.is_valid() and _hurt_tween.is_running()
 
 
 # AC3：低于阈值进入闪烁并提醒一次；同一低氧时段不重复，回升后再低重新提醒。
@@ -158,6 +198,13 @@ func _stop_flash() -> void:
 	_flash_tween = null
 	if is_instance_valid(_oxygen_bar):
 		_oxygen_bar.modulate.a = 1.0
+
+
+# 三条数值条的针对性标注：氧气/体力/生命，文案走 ui_strings.json（NFR-04）。
+func _apply_labels() -> void:
+	_oxygen_label.text = _ui(UI_OXYGEN_LABEL)
+	_energy_label.text = _ui(UI_ENERGY_LABEL)
+	_health_label.text = _ui(UI_HEALTH_LABEL)
 
 
 # AC2：已收集计数，格式串来自 ui_strings.json（「已收集 {n}/16」）。

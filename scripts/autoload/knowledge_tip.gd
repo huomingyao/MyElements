@@ -56,8 +56,9 @@ func show(tip_id: String) -> void:
 	if tip.is_empty():
 		push_warning("[tip] 不存在的 tip_id：%s（忽略）" % tip_id)
 		return
-	# 表里标了 once 的字幕（区域横幅、首次拾取）即使走 show() 也只显示一次。
-	if bool(tip.get(KEY_ONCE, false)) and _shown.has(tip_id):
+	# 表里标了 once 的字幕（区域横幅、首次拾取）即使走 show() 也只显示一次；
+	# 排队中/显示中的同一条不重复入队（_shown 在 _start 时才标记，见 _enqueue）。
+	if bool(tip.get(KEY_ONCE, false)) and (_shown.has(tip_id) or _is_pending(tip_id)):
 		return
 	var style: String = str(tip.get(KEY_STYLE, DEFAULT_STYLE))
 	if not STYLES.has(style):
@@ -82,7 +83,7 @@ func _resolve_duration(tip: Dictionary, style: String) -> float:
 
 # 同一 id 只显示一次（区域横幅、首次拾取）。
 func show_once(tip_id: String) -> void:
-	if _shown.has(tip_id):
+	if _shown.has(tip_id) or _is_pending(tip_id):
 		return
 	show(tip_id)
 
@@ -152,13 +153,14 @@ func advance(delta: float) -> void:
 
 
 # 入队：warning 抢占当前非 warning 字幕；其余按先后顺序排队串行播放（AC3 不重叠）。
+# _shown 不在此标记——入队不等于开播，改在 _start() 里记，避免排队中被清掉后永久锁死。
 func _enqueue(entry: Dictionary) -> void:
-	var tip_id: String = str(entry[KEY_ID])
-	if not tip_id.is_empty():
-		_shown[tip_id] = true
 	if str(entry[KEY_STYLE]) == INTERRUPT_STYLE and _is_preemptable():
-		# 被打断的字幕直接作废，不重播（避免危险提示过后又弹回旧内容）。
+		# 被打断的字幕直接作废，不重播（避免危险提示过后又弹回旧内容）；
+		# 但 once 字幕撤销已展示记录，之后还能被再次触发，不许永久丢失。
+		var dropped_id: String = str(_current.get(KEY_ID, ""))
 		_drop_current()
+		_unmark_once(dropped_id)
 		_start(entry)
 		return
 	if _current.is_empty():
@@ -173,11 +175,34 @@ func _is_preemptable() -> bool:
 	return str(_current.get(KEY_STYLE, "")) != INTERRUPT_STYLE
 
 
+# 该 id 是否已在显示或排队中（once 字幕重复触发去重用）。
+func _is_pending(tip_id: String) -> bool:
+	if tip_id.is_empty():
+		return false
+	if str(_current.get(KEY_ID, "")) == tip_id:
+		return true
+	for entry in _queue:
+		if str((entry as Dictionary).get(KEY_ID, "")) == tip_id:
+			return true
+	return false
+
+
+# 撤销 once 字幕的已展示记录（仅在被抢占打断时调用，正常播完不撤销）。
+func _unmark_once(tip_id: String) -> void:
+	if tip_id.is_empty() or not _shown.has(tip_id):
+		return
+	var tip: Dictionary = _tips.get(tip_id, {})
+	if bool(tip.get(KEY_ONCE, false)):
+		_shown.erase(tip_id)
+
+
 func _start(entry: Dictionary) -> void:
 	_current = entry
 	_elapsed = 0.0
 	var tip_id: String = str(entry[KEY_ID])
 	if not tip_id.is_empty():
+		# 已展示记录在真正开播时标记（once 判定见 show()/show_once()）。
+		_shown[tip_id] = true
 		tip_shown.emit(tip_id)
 
 

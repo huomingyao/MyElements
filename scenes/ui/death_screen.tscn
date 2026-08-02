@@ -16,9 +16,48 @@ color = Color(0, 0, 0, 0.6)
 
 [node name="TitleLabel" type="Label" parent="."]
 unique_name_in_owner = true
-anchors_preset = 10
+anchors_preset = 0
 anchor_right = 1.0
-offset_top = 140.0
-offset_bottom = 163.0
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_top = -95.0
+offset_bottom = -72.0
 grow_horizontal = 2
+grow_vertical = 2
+horizontal_alignment = 1
+
+[node name="DayLabel" type="Label" parent="."]
+unique_name_in_owner = true
+anchors_preset = 0
+anchor_right = 1.0
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_top = -64.0
+offset_bottom = -41.0
+grow_horizontal = 2
+grow_vertical = 2
+horizontal_alignment = 1
+
+[node name="InfoLabel" type="Label" parent="."]
+unique_name_in_owner = true
+anchors_preset = 0
+anchor_right = 1.0
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_top = -33.0
+offset_bottom = -10.0
+grow_horizontal = 2
+grow_vertical = 2
+horizontal_alignment = 1
+
+[node name="HintLabel" type="Label" parent="."]
+unique_name_in_owner = true
+anchors_preset = 0
+anchor_right = 1.0
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_top = 71.0
+offset_bottom = 94.0
+grow_horizontal = 2
+grow_vertical = 2
 horizontal_alignment = 1

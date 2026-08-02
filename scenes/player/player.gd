@@ -53,6 +53,18 @@ var item_effects: RefCounted = null
 # 模态面板打开时由世界（ui_manager 裁决）置位：屏蔽移动与交互，重力照常（SPEC-03 §8）。
 var input_blocked: bool = false
 
+# ==== 手感参数（包A-5）：@export 暴露在检查器，默认值已调好，不写魔法数字 ====
+
+# 土狼时间（秒）：走出平台边缘后该窗口内仍可起跳。
+@export var coyote_time: float = 0.1
+# 跳跃缓冲（秒）：落地前该窗口内按跳会在落地瞬间自动起跳。
+@export var jump_buffer_time: float = 0.1
+# 下落段重力倍数：>1 让下落更扎实，改善发飘感（上升段保持原重力）。
+@export var fall_gravity_multiplier: float = 1.35
+
+var _coyote_timer: float = 0.0
+var _jump_buffer_timer: float = 0.0
+
 var _torch_equipped: bool = false
 var _current_target: Node = null
 
@@ -100,6 +112,7 @@ func reload_config() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	_update_jump_timers(delta)
 	_apply_gravity(delta)
 	_apply_movement()
 	move_and_slide()
@@ -107,9 +120,29 @@ func _physics_process(delta: float) -> void:
 	_update_light()
 
 
+# 土狼时间与跳跃缓冲计时（包A-5）：着地刷新 coyote，按跳写入缓冲；
+# 屏蔽输入时不缓冲（面板打开期间按跳不残留）。
+func _update_jump_timers(delta: float) -> void:
+	if is_on_floor():
+		_coyote_timer = coyote_time
+	else:
+		_coyote_timer = maxf(_coyote_timer - delta, 0.0)
+	_jump_buffer_timer = maxf(_jump_buffer_timer - delta, 0.0)
+	if input_blocked:
+		_jump_buffer_timer = 0.0
+		return
+	if Input.is_action_just_pressed("jump"):
+		_jump_buffer_timer = jump_buffer_time
+
+
 func _apply_gravity(delta: float) -> void:
-	if not is_on_floor():
-		velocity.y += gravity * delta
+	if is_on_floor():
+		return
+	# 下落段重力加倍数（包A-5），上升段保持原重力。
+	var multiplier: float = 1.0
+	if velocity.y > 0.0:
+		multiplier = fall_gravity_multiplier
+	velocity.y += gravity * multiplier * delta
 
 
 func _apply_movement() -> void:
@@ -121,8 +154,11 @@ func _apply_movement() -> void:
 	velocity.x = direction * speed
 	if not is_zero_approx(direction):
 		facing = signi(direction)
-	if Input.is_action_just_pressed("jump") and is_on_floor():
+	# 起跳 = 缓冲窗口内按过跳 + （着地 或 coyote 窗口内）；起跳后两计时清零防二段。
+	if _jump_buffer_timer > 0.0 and _coyote_timer > 0.0:
 		velocity.y = jump_velocity
+		_jump_buffer_timer = 0.0
+		_coyote_timer = 0.0
 
 
 # 能量归零时速度打折（FR-P-01 AC2）；倍率由 GameManager 统一结算。
@@ -137,7 +173,10 @@ func _speed_multiplier() -> float:
 
 func _update_interaction() -> void:
 	_current_target = _interactor.nearest_interactable(global_position)
-	if _current_target != null and bool(_current_target.can_interact()):
+	# 模态面板打开（input_blocked）时气泡必须隐藏，不许在面板后面冒提示（包A-7）。
+	if input_blocked:
+		_prompt.visible = false
+	elif _current_target != null and bool(_current_target.can_interact()):
 		_prompt.text = _ui_string(str(_current_target.get_interact_prompt()))
 		_prompt.visible = true
 	else:
@@ -167,6 +206,11 @@ func current_interactable() -> Node:
 # 由世界场景在铺好地图后调用，把可行走边界写进相机 limit（FR-P-03 AC1）。
 func set_map_bounds(bounds: Rect2) -> void:
 	_camera.set_map_bounds(bounds)
+
+
+# 传送/复活后由世界调用：相机平滑立即对齐新位置，不横跨地图慢追（包A-4）。
+func reset_camera_smoothing() -> void:
+	_camera.snap_to_target()
 
 
 # 装备/卸下硫火把（FR-G-12 的道具生效会调这里）；只影响可视半径，不管贴图。

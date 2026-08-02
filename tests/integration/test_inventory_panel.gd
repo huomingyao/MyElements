@@ -127,8 +127,52 @@ func test_slots_provide_drag_data() -> void:
 		assert_eq(empty_slot._get_drag_data(Vector2.ZERO), null, "空格不提供拖拽")
 
 
-# AC1：打开时玩家输入被屏蔽——ui_manager 裁决（聊天框例外由世界注册时声明）。
-func test_ui_manager_blocks_input_when_panel_open() -> void:
+# 占位纹理缓存（包E）：同一物品跨刷新复用同一纹理实例，不再每格每刷新建图。
+func test_placeholder_texture_cached_across_refreshes() -> void:
+	if _skip_unless_ready(["slot_icon_texture"]):
+		return
+	_inventory.add_item("o2", 1)
+	await wait_process_frames(1)
+	var tex_before: Texture2D = _panel.slot_icon_texture(0)
+	assert_not_null(tex_before, "前提：有占位纹理")
+	_inventory.add_item("stick", 1) # 触发整表刷新
+	await wait_process_frames(1)
+	var tex_after: Texture2D = _panel.slot_icon_texture(0)
+	assert_true(tex_before == tex_after, "刷新后同一物品应复用缓存纹理，不再重建")
+
+
+# 占位纹理缓存按颜色键共享：同色同实例，异色各自缓存。
+func test_placeholder_cache_keyed_by_color() -> void:
+	if _skip_unless_ready(["placeholder_texture_for"]):
+		return
+	var red_a: Texture2D = _panel.placeholder_texture_for(Color(1.0, 0.0, 0.0))
+	var red_b: Texture2D = _panel.placeholder_texture_for(Color(1.0, 0.0, 0.0))
+	var blue: Texture2D = _panel.placeholder_texture_for(Color(0.0, 0.0, 1.0))
+	assert_true(red_a == red_b, "同色应命中缓存返回同一实例")
+	assert_true(red_a != blue, "不同色应各自缓存")
+	if red_a != null:
+		assert_eq(red_a.get_width(), 32, "占位纹理尺寸应为 PLACEHOLDER_SIZE(32)")
+
+
+# 拖拽预览（包E）：占位纹理 + 数量角标，不再只是纯文字 Label。
+func test_drag_preview_uses_placeholder_with_count_badge() -> void:
+	if _skip_unless_ready(["make_drag_preview"]):
+		return
+	var preview: Control = _panel.make_drag_preview("o2", "3") as Control
+	assert_not_null(preview, "应能构建拖拽预览")
+	if preview == null:
+		return
+	var icon: TextureRect = preview.get_node_or_null(^"Icon") as TextureRect
+	assert_not_null(icon, "预览应带占位纹理节点")
+	if icon != null:
+		assert_not_null(icon.texture, "预览占位纹理不应为空")
+	var badge: Label = preview.get_node_or_null(^"Count") as Label
+	assert_not_null(badge, "预览应带数量角标")
+	if badge != null:
+		assert_eq(str(badge.text), "3", "角标应显示数量")
+
+
+# AC1：打开时玩家输入被屏蔽——ui_manager 裁决（聊天框例外由世界注册时声明）。func test_ui_manager_blocks_input_when_panel_open() -> void:
 	if not FileAccess.file_exists(UI_MANAGER_SCRIPT):
 		fail_test("尚未实现 %s（SPEC-03 §8）" % UI_MANAGER_SCRIPT)
 		return

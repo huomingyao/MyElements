@@ -91,4 +91,3 @@ func _recipe_db() -> Node:
 	if loop == null or not (loop is SceneTree):
 		return null
 	return (loop as SceneTree).root.get_node_or_null(^"RecipeDB")
-

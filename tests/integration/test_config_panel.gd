@@ -9,6 +9,8 @@ const Fixture: GDScript = preload("res://tests/data/json_fixture.gd")
 const PANEL_PATH: String = "res://scenes/mentor/config_panel.tscn"
 const SCRIPT_PATH: String = "res://scenes/mentor/config_panel.gd"
 const NOTE_KEY: String = "config_note"
+const APPLY_KEY: String = "config_apply"
+const UI_MANAGER_SCRIPT: String = "res://scenes/main/ui_manager.gd"
 
 const N_KEY_INPUT: String = "KeyInput"
 const N_APPLY: String = "ApplyButton"
@@ -191,6 +193,16 @@ func test_personality_slider_moves_but_changes_nothing() -> void:
 	assert_eq(_client.offline_calls, [], "拖滑块不该改离线状态")
 
 
+# 优化包C-6：MVP 期性格滑块对玩家隐藏（配置节点保留、赛后启用），避免误以为功能缺失。
+func test_personality_slider_hidden_for_mvp() -> void:
+	if _panel == null:
+		return
+	var slider: Node = _node(N_SLIDER)
+	if slider == null:
+		return
+	assert_false(slider.visible, "MVP 期性格滑块应隐藏（死 UI 不上屏）")
+
+
 # AC2：滑块值没人消费——除面板自身外，代码里不许出现 personality( 的调用。
 func test_personality_value_is_consumed_by_nobody() -> void:
 	var hits: Array = []
@@ -215,6 +227,65 @@ func test_note_text_comes_from_ui_strings() -> void:
 	if note == null:
 		return
 	assert_eq(str(note.text), expected, "标签上显示的就是表里的原文")
+
+
+# ==== 包A-3：可达性与 NFR-04 收口 ====
+
+# NFR-04：Apply 按钮文案来自 ui_strings.config_apply，不再用场景里硬编码的 "OK"。
+func test_apply_button_text_comes_from_ui_strings() -> void:
+	if _panel == null:
+		return
+	var button: Node = _node(N_APPLY)
+	if button == null:
+		return
+	var expected: String = _ui_string(APPLY_KEY)
+	assert_false(expected.is_empty(), "ui_strings.json 应有 %s" % APPLY_KEY)
+	assert_eq(
+		str(button.get("text")), expected,
+		"ApplyButton 文案应来自 ui_strings.%s（NFR-04）" % APPLY_KEY
+	)
+
+
+# ui_manager 面板契约（SPEC-03 §8）：open/close/is_open，初始隐藏等裁决器打开。
+func test_panel_contract_open_close_is_open() -> void:
+	if _skip_unless(["open", "close", "is_open"]):
+		return
+	assert_false(_panel.is_open(), "初始应处于关闭状态")
+	assert_false(_panel.visible, "初始应隐藏（等 ui_manager 打开）")
+	_panel.open()
+	assert_true(_panel.is_open(), "open() 后应打开")
+	assert_true(_panel.visible, "open() 后应可见")
+	_panel.close()
+	assert_false(_panel.is_open(), "close() 后应关闭")
+	assert_false(_panel.visible, "close() 后应隐藏")
+
+
+# 包A-3 可达性：面板在世界骨架（UILayer/UIManager）下实例化时自注册，
+# 经 ui_manager.open() 打开并参与互斥裁决（模态：屏蔽玩家输入）。
+func test_panel_registers_itself_with_ui_manager() -> void:
+	var rig: Node = Node.new()
+	add_child_autofree(rig)
+	var ui_layer: Node = Node.new()
+	ui_layer.name = "UILayer"
+	rig.add_child(ui_layer)
+	var manager: Node = (load(UI_MANAGER_SCRIPT) as GDScript).new()
+	manager.name = "UIManager"
+	ui_layer.add_child(manager)
+	var client: Node = FakeClient.new()
+	rig.add_child(client)
+	var panel: Node = (load(PANEL_PATH) as PackedScene).instantiate()
+	panel.set_client(client)
+	rig.add_child(panel) # _ready 在此触发 → 应自注册
+	await wait_process_frames(1)
+	assert_true(manager.has_panel("config"), "面板应自注册进 ui_manager（包A-3 可达性）")
+	if not manager.has_panel("config"):
+		return
+	manager.open("config")
+	assert_true(manager.is_open("config"), "config 面板应能经 ui_manager 打开")
+	assert_true(panel.is_open(), "面板应被 ui_manager 打开")
+	assert_true(manager.input_blocked(), "config 是模态面板：打开时屏蔽玩家输入")
+	manager.close_active()
+	assert_false(panel.is_open(), "裁决关闭后面板应关闭")
 
 
 # NFR-04：面板脚本里不许出现中文字面量（文案一律走 get_ui_string）。注释除外。

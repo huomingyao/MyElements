@@ -32,7 +32,15 @@ const REASON_NEEDS_PURITY: String = "needs_purity_check"
 
 # 氢气提问判定的关键词来源（qa_fallback.json 行 id；关键词本身是数据表内容）。
 const QA_TABLE: String = "qa_fallback.json"
+const QA_PATH: String = "res://data/qa_fallback.json"
 const QA_HYDROGEN_ROW_ID: String = "qa_h2_explosion"
+
+# ==== 状态区 ====
+
+# 关键词缓存：首次判定后持有，逐条提问不再重读整表（优化包C-2）；
+# 记录数据文件修改时间，数据表变动（reload/内容更新）时缓存自动失效。
+var _h2_keywords: Array = []
+var _h2_keywords_mtime: int = -1
 
 # ==== 逻辑区 ====
 
@@ -102,6 +110,15 @@ func question_mentions_hydrogen(question: String) -> bool:
 
 
 func _hydrogen_keywords() -> Array:
+	var mtime: int = FileAccess.get_modified_time(QA_PATH)
+	if _h2_keywords_mtime >= 0 and mtime == _h2_keywords_mtime:
+		return _h2_keywords
+	_h2_keywords = _load_hydrogen_keywords()
+	_h2_keywords_mtime = mtime
+	return _h2_keywords
+
+
+func _load_hydrogen_keywords() -> Array:
 	var rows: Array = DataLoader.load_table(QA_TABLE, TYPE_ARRAY, [])
 	for row: Variant in rows:
 		if typeof(row) != TYPE_DICTIONARY:

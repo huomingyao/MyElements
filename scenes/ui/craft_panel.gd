@@ -206,6 +206,13 @@ func can_purity_check() -> bool:
 	return bool(_hydrogen.is_purity_check_available())
 
 
+# 点燃选项是否出现（FR-G-08 AC1）：背包或合成槽内有 H₂ 才显示（包B-A6，此前恒可见）。
+func can_ignite() -> bool:
+	if _slots.has(HYDROGEN_INPUT_ID):
+		return true
+	return _inventory != null and bool(_inventory.has_item(HYDROGEN_INPUT_ID, 1))
+
+
 # 执行验纯（FR-G-09 AC2）：噗声 + sys_purity_ok，由 HydrogenEvent 结算。
 func purity_check() -> bool:
 	if not can_purity_check():
@@ -317,6 +324,7 @@ func _refresh() -> void:
 	for tool: String in TOOL_OPTIONS:
 		(_tool_buttons[tool] as Button).modulate = Color(1, 1, 1) if tool == _tool else Color(0.6, 0.6, 0.6)
 	_purity_button.visible = can_purity_check()
+	_ignite_button.visible = can_ignite()
 
 
 # 名称解析同采集物：先物质表再道具表；都查不到显示 id 本身（不崩溃）。

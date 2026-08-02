@@ -11,7 +11,8 @@
     "icon": "res://assets/art/icons/o2.png",
     "codex_line": "生命与燃烧都离不开它，但它自己不会燃烧。",
     "stackable": true,
-    "count_in_hud": true
+    "count_in_hud": true,
+    "obtain": "草原采集；也可电解纯净水获得"
   },
   {
     "id": "h2",
@@ -25,7 +26,8 @@
     "icon": "res://assets/art/icons/h2.png",
     "codex_line": "最清洁的燃料，也是最\"暴脾气\"的气体——验纯！",
     "stackable": true,
-    "count_in_hud": true
+    "count_in_hud": true,
+    "obtain": "电解器电解纯净水获得（负极产物）"
   },
   {
     "id": "c",
@@ -39,7 +41,8 @@
     "icon": "res://assets/art/icons/c.png",
     "codex_line": "充分燃烧生 CO₂，不充分生 CO——氧气多少决定产物。",
     "stackable": true,
-    "count_in_hud": true
+    "count_in_hud": true,
+    "obtain": "草原采集"
   },
   {
     "id": "s",
@@ -53,7 +56,8 @@
     "icon": "res://assets/art/icons/s.png",
     "codex_line": "淡黄色粉末，点燃就是一把好火把，代价是刺激性气味。",
     "stackable": true,
-    "count_in_hud": true
+    "count_in_hud": true,
+    "obtain": "矿洞采集"
   },
   {
     "id": "co",
@@ -67,7 +71,8 @@
     "icon": "res://assets/art/icons/co.png",
     "codex_line": "沉默的杀手，活性炭口罩是它的克星。",
     "stackable": true,
-    "count_in_hud": true
+    "count_in_hud": true,
+    "obtain": "酒精灯点燃碳，氧气不足时不充分燃烧生成"
   },
   {
     "id": "co2",
@@ -79,7 +84,8 @@
     "icon": "res://assets/art/icons/co2.png",
     "codex_line": "灭火能手，石灰水的\"试金石\"。",
     "stackable": true,
-    "count_in_hud": false
+    "count_in_hud": false,
+    "obtain": "酒精灯点燃碳充分燃烧；或实验台碳酸钙加稀盐酸制取"
   },
   {
     "id": "h2o",
@@ -93,7 +99,8 @@
     "icon": "res://assets/art/icons/h2o.png",
     "codex_line": "最常见的溶剂，净化四步后才配进实验室。",
     "stackable": true,
-    "count_in_hud": true
+    "count_in_hud": true,
+    "obtain": "营地河边采集"
   },
   {
     "id": "h2o_clean",
@@ -107,7 +114,8 @@
     "icon": "res://assets/art/icons/h2o_clean.png",
     "codex_line": "蒸馏水，纯净物——实验台上唯一合格的水。",
     "stackable": true,
-    "count_in_hud": true
+    "count_in_hud": true,
+    "obtain": "营地过滤器净化河水获得"
   },
   {
     "id": "caco3",
@@ -121,7 +129,8 @@
     "icon": "res://assets/art/icons/caco3.png",
     "codex_line": "石灰石、大理石、水垢——它们是同一种物质。",
     "stackable": true,
-    "count_in_hud": true
+    "count_in_hud": true,
+    "obtain": "矿洞采集；也可用二氧化碳通入石灰水制取"
   },
   {
     "id": "fe2o3",
@@ -135,7 +144,8 @@
     "icon": "res://assets/art/icons/fe2o3.png",
     "codex_line": "赤铁矿的红色，高炉里炼出铁水。",
     "stackable": true,
-    "count_in_hud": true
+    "count_in_hud": true,
+    "obtain": "矿洞采集"
   },
   {
     "id": "cuso4",
@@ -149,7 +159,8 @@
     "icon": "res://assets/art/icons/cuso4.png",
     "codex_line": "漂亮的蓝色，有毒的蓝色。",
     "stackable": true,
-    "count_in_hud": true
+    "count_in_hud": true,
+    "obtain": "矿洞采集"
   },
   {
     "id": "hcl",
@@ -163,7 +174,8 @@
     "icon": "res://assets/art/icons/hcl.png",
     "codex_line": "腐蚀性很强，除锈和制 CO₂ 也很强。",
     "stackable": true,
-    "count_in_hud": true
+    "count_in_hud": true,
+    "obtain": "营地试剂架采集"
   },
   {
     "id": "naoh",
@@ -177,7 +189,8 @@
     "icon": "res://assets/art/icons/naoh.png",
     "codex_line": "烧碱，强腐蚀，中和反应的主力碱。",
     "stackable": true,
-    "count_in_hud": true
+    "count_in_hud": true,
+    "obtain": "营地试剂架采集"
   },
   {
     "id": "caoh2",
@@ -191,7 +204,8 @@
     "icon": "res://assets/art/icons/caoh2.png",
     "codex_line": "熟石灰，改良酸性土壤、检验 CO₂ 都用它。",
     "stackable": true,
-    "count_in_hud": true
+    "count_in_hud": true,
+    "obtain": "营地试剂架采集"
   },
   {
     "id": "fe",
@@ -205,7 +219,8 @@
     "icon": "res://assets/art/icons/fe.png",
     "codex_line": "会生锈的金属，生锈需要氧气和水同时存在。",
     "stackable": true,
-    "count_in_hud": true
+    "count_in_hud": true,
+    "obtain": "矿洞采集"
   },
   {
     "id": "crude_salt",
@@ -219,7 +234,8 @@
     "icon": "res://assets/art/icons/crude_salt.png",
     "codex_line": "湖边的白色结晶，混着泥沙——提纯三步后才是食盐。",
     "stackable": true,
-    "count_in_hud": true
+    "count_in_hud": true,
+    "obtain": "盐湖边采集"
   },
   {
     "id": "nacl",
@@ -231,6 +247,7 @@
     "icon": "res://assets/art/icons/nacl.png",
     "codex_line": "由钠离子和氯离子构成的盐，百味之首，也是生理盐水的主要成分。",
     "stackable": true,
-    "count_in_hud": true
+    "count_in_hud": true,
+    "obtain": "粗盐提纯三步（溶解 → 过滤 → 蒸发）获得"
   }
 ]

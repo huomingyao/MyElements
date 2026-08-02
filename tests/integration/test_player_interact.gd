@@ -128,3 +128,21 @@ func test_no_target_in_range() -> void:
 	if _player == null:
 		return
 	assert_null(_player.current_interactable(), "范围内没有交互物时应为 null")
+
+
+# 包A-7：模态面板打开（input_blocked）时气泡必须隐藏，不许在面板后面冒提示；解除后恢复。
+func test_prompt_hides_when_input_blocked() -> void:
+	if _player == null:
+		return
+	var bubble: Label = _prompt_bubble()
+	if bubble == null:
+		return
+	var _target: FakeInteractable = _spawn_target(Vector2(16.0, 0.0))
+	await wait_physics_frames(3)
+	assert_true(bubble.visible, "前置：范围内有可交互对象时气泡应显示")
+	_player.set("input_blocked", true)
+	await wait_physics_frames(2)
+	assert_false(bubble.visible, "input_blocked 时气泡应隐藏")
+	_player.set("input_blocked", false)
+	await wait_physics_frames(2)
+	assert_true(bubble.visible, "解除屏蔽后气泡应恢复显示")

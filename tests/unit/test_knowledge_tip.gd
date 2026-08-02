@@ -104,6 +104,33 @@ func test_warning_does_not_interrupt_warning() -> void:
 	assert_eq(tip.queue_size(), 1, "第二条 warning 应排队而非抢占")
 
 
+# 优化包C-3：once 字幕被 warning 抢占后不许永久丢失——撤销已展示记录，之后可再次触发。
+func test_preempted_once_tip_can_be_triggered_again() -> void:
+	tip.show("t_once")
+	assert_eq(tip.current_tip_id(), "t_once", "前置：once 字幕正在显示")
+	tip.show("t_warning")
+	assert_eq(tip.current_tip_id(), "t_warning", "前置：warning 应抢占 once 字幕")
+	tip.advance(5.0)
+	assert_eq(tip.current_tip_id(), "", "warning 播完后无显示")
+	tip.show_once("t_once")
+	assert_eq(tip.current_tip_id(), "t_once", "被抢占的 once 字幕应能再次触发（不许永久丢失）")
+
+
+# 优化包C-3：once 字幕在 _start 时才记已展示，入队不记；
+# 排队中被 clear_queue 清掉或未来被抢占都不至于永久锁死；排队期间重复触发去重。
+func test_once_tip_marked_shown_at_start_not_enqueue() -> void:
+	tip.show("t_bubble")
+	tip.show("t_once")
+	assert_eq(tip.current_tip_id(), "t_bubble", "前置：bubble 正在显示")
+	assert_eq(tip.queue_size(), 1, "once 字幕应在排队")
+	assert_false(tip.is_shown("t_once"), "排队中不应记为已展示（_shown 应在 _start 时标记）")
+	tip.show("t_once")
+	assert_eq(tip.queue_size(), 1, "排队期间重复触发同一条 once 字幕应去重")
+	tip.advance(3.0)
+	assert_eq(tip.current_tip_id(), "t_once", "bubble 播完后 once 字幕开播")
+	assert_true(tip.is_shown("t_once"), "开播后才记为已展示")
+
+
 # AC4：show_once 的 id 重复调用不再显示。
 func test_show_once_only_displays_once() -> void:
 	tip.show_once("t_once")

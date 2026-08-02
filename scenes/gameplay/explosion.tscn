@@ -5,6 +5,19 @@
 [node name="Explosion" type="Node2D"]
 script = ExtResource("1")
 
+[node name="Visuals" type="Node2D" parent="."]
+unique_name_in_owner = true
+
+[node name="Fireball" type="Polygon2D" parent="Visuals"]
+unique_name_in_owner = true
+color = Color(1, 0.55, 0.15, 0.95)
+polygon = PackedVector2Array(-8, 0, 0, -8, 8, 0, 0, 8)
+
+[node name="Shockwave" type="Polygon2D" parent="Visuals"]
+unique_name_in_owner = true
+color = Color(1, 0.75, 0.35, 0.7)
+polygon = PackedVector2Array(-6, -1, -4, -5, 0, -6, 4, -5, 6, -1, 4, 3, 0, 4, -4, 3)
+
 [node name="FlashLayer" type="CanvasLayer" parent="."]
 layer = 16
 
@@ -19,5 +32,8 @@ grow_vertical = 2
 mouse_filter = 2
 color = Color(1, 0.55, 0.15, 1)
 
-[node name="BoomPlayer" type="AudioStreamPlayer" parent="."]
+[node name="Audio" type="Node2D" parent="."]
+unique_name_in_owner = true
+
+[node name="BoomPlayer" type="AudioStreamPlayer" parent="Audio"]
 unique_name_in_owner = true

@@ -13,6 +13,9 @@ const UI_KEY_LOCKED: String = "codex_locked"
 const GAME_MANAGER_PATH: NodePath = ^"/root/GameManager"
 const RECIPE_DB_PATH: NodePath = ^"/root/RecipeDB"
 const CARD_KEYS: Array[String] = ["title", "equation", "body", "application", "footer"]
+# B-003 / FR-U-04 AC4：会话共享 Discovery 的 SceneTree 根元数据键（D2 出生点覆盖同款模式；
+# SPEC-03 冻结五个 autoload，不新增 autoload）。游戏内注入即登记，主菜单未注入面板读取同一来源。
+const SESSION_DISCOVERY_META: String = "session_discovery"
 
 # ==== 状态区 ====
 # 收集进度来源（TP-06 纯逻辑类）。测试/ gameplay 经 set_discovery 注入共享实例；
@@ -44,8 +47,11 @@ func _ready() -> void:
 
 
 # 注入口（同 config_panel 的 set_client 模式）：注入后按最新状态重绘。
+# 同时登记为会话共享来源（B-003）：之后主菜单图鉴门打开的未注入面板读同一实例，数据一致。
 func set_discovery(discovery: RefCounted) -> void:
 	_discovery = discovery
+	if discovery != null and is_inside_tree():
+		get_tree().root.set_meta(SESSION_DISCOVERY_META, discovery)
 	if is_node_ready():
 		refresh()
 
@@ -112,13 +118,24 @@ func is_open() -> bool:
 	return visible
 
 
-# 未注入共享实例时自建空 Discovery（全部锁定），面板可独立打开（AC4）。
+# 未注入共享实例时的数据来源（AC4）：
+# ① 会话已有注入记录（游戏内开过图鉴）→ 读同一 Discovery，Esc 回主菜单再进图鉴数据一致（B-003）；
+# ② 会话尚无记录（主菜单直接打开）→ 自建空集合（全部锁定，合理空态）并登记，不崩溃。
 func _default_discovery() -> RefCounted:
+	if is_inside_tree():
+		var root: Window = get_tree().root
+		if root.has_meta(SESSION_DISCOVERY_META):
+			var shared: Variant = root.get_meta(SESSION_DISCOVERY_META)
+			if shared is RefCounted:
+				return shared
 	var script: Resource = load(DISCOVERY_SCRIPT_PATH)
 	if script == null:
 		push_warning("[codex] discovery script missing, grid stays locked")
 		return null
-	return script.new()
+	var fresh: RefCounted = script.new()
+	if is_inside_tree():
+		get_tree().root.set_meta(SESSION_DISCOVERY_META, fresh)
+	return fresh
 
 
 # 一格对应一条物质记录；格数自数据表得出（不写死 17）。

@@ -194,6 +194,26 @@ func test_distant_player_triggers_no_warning() -> void:
 	assert_false(tip.is_shown("warn_co"), "远处玩家不应触发 warn_co")
 
 
+# 模块化重构（视觉逻辑分离）：身体/眼睛/光晕拆成 Visuals 下独立节点，可针对单部件修改。
+func test_modular_node_structure() -> void:
+	var ghost: Node2D = _spawn_ghost(Vector2.ZERO)
+	if ghost == null:
+		return
+	var visuals: Node = ghost.get_node_or_null(^"%Visuals")
+	assert_not_null(visuals, "CO 幽灵应有 %Visuals 视觉容器（模块化重构）")
+	if visuals == null:
+		return
+	assert_true(visuals is Node2D, "视觉容器应为 Node2D")
+	for part_name: String in ["Glow", "Body", "EyeL", "EyeR"]:
+		var part: Node = ghost.get_node_or_null(NodePath("%" + part_name))
+		assert_not_null(part, "CO 幽灵应有 %s 部件（模块化重构）" % part_name)
+		if part == null:
+			continue
+		assert_true(part is Polygon2D, "%s 部件应为 Polygon2D" % part_name)
+		assert_eq(part.get_parent(), visuals, "%s 部件应挂在 %Visuals 容器下" % part_name)
+	assert_not_null(ghost.get_node_or_null(^"%ContactArea"), "接触判定 %ContactArea 必须保留")
+
+
 # 逻辑代码不许出现中文文案（NFR-04；push_warning/push_error/print 诊断日志除外）。
 func test_source_has_no_chinese_literals() -> void:
 	if not ResourceLoader.exists(GHOST_SCRIPT_PATH):

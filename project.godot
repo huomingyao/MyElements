@@ -26,8 +26,7 @@ WorldMap="*res://scripts/autoload/world_map.gd"
 
 [display]
 
-window/size/viewport_width=640
-window/size/viewport_height=360
+window/size/mode=2
 window/stretch/mode="canvas_items"
 
 [editor_plugins]
@@ -40,6 +39,10 @@ bind_mode=0
 custom_bind_ip=""
 port_override_enabled=false
 port_override=6550
+
+[gui]
+
+theme/custom_font="res://assets/fonts/fusion-pixel-12px-proportional-zh_hans.ttf"
 
 [input]
 

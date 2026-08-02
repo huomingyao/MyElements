@@ -31,7 +31,6 @@ secret = true
 [node name="ApplyButton" type="Button" parent="Box/KeyRow"]
 unique_name_in_owner = true
 layout_mode = 2
-text = "OK"
 
 [node name="OfflineToggle" type="CheckButton" parent="Box"]
 unique_name_in_owner = true
@@ -40,6 +39,7 @@ layout_mode = 2
 [node name="PersonalitySlider" type="HSlider" parent="Box"]
 unique_name_in_owner = true
 layout_mode = 2
+visible = false
 min_value = 0.0
 max_value = 1.0
 step = 0.05

@@ -9,6 +9,9 @@ const BAL_DAY_DURATION: String = "daynight.day_duration"
 const BAL_NIGHT_DURATION: String = "daynight.night_duration"
 const BAL_NIGHT_BRIGHTNESS: String = "daynight.night_brightness"
 
+# 字幕队列冲刷时长（秒）：一次性推进足够清空多条排队横幅（单条最长 warning 5s）。
+const TIP_FLUSH_SECONDS: float = 60.0
+
 var gm: Node = null
 var tip: Node = null
 var recipe_db: Node = null
@@ -47,6 +50,7 @@ func before_each() -> void:
 
 
 func after_each() -> void:
+	get_tree().paused = false # 暂停测试的安全复位：树留着 paused 会拖垮后续用例
 	if _world != null:
 		remove_child(_world)
 		_world.queue_free()
@@ -290,6 +294,27 @@ func test_craft_success_opens_card_popup() -> void:
 	assert_false(_player.get("input_blocked"), "跳过卡片后恢复")
 
 
+# 提纯卡片接线（FR-G-14 AC2 世界段，包B-A1）：实验台三步完成 → 卡片弹窗弹出（物理变化说明）。
+func test_purify_completion_opens_card_popup() -> void:
+	if _skip_unless_ready():
+		return
+	var bench: Node = _world.get_node_or_null(^"Facilities/FacilityBench")
+	var popup: Node = _world.get_node_or_null(^"UILayer/CardPopup")
+	assert_not_null(bench, "营地应有实验台")
+	assert_not_null(popup, "应有卡片弹窗")
+	if bench == null or popup == null:
+		return
+	var inventory: RefCounted = _player.get("inventory")
+	inventory.add_item("crude_salt", 1)
+	for i: int in 3:
+		bench.interact(_player)
+	await wait_process_frames(1)
+	assert_eq(inventory.count_of("nacl"), 1, "三步完成后应得到 nacl（前置）")
+	assert_true(popup.is_open(), "提纯三步完成应弹出知识卡片（FR-G-14 AC2）")
+	popup.close()
+	await wait_process_frames(1)
+
+
 # 快捷使用（FR-G-12 接线）：数字键使用快捷栏道具。
 func test_hotkey_uses_item() -> void:
 	if _skip_unless_ready():
@@ -324,6 +349,7 @@ func test_hotkey_equips_torch() -> void:
 
 
 # 学院接线（TP-17）：学院实例在世界内，聊天框注册为不屏蔽输入的面板。
+# 收口 W1：聊天框具备 open/close/is_open 面板契约，ui_manager.open("chat") 不报错。
 func test_academy_instanced_with_chat_registered() -> void:
 	if _skip_unless_ready():
 		return
@@ -332,8 +358,19 @@ func test_academy_instanced_with_chat_registered() -> void:
 	assert_not_null(chat, "学院内应有聊天框")
 	var manager: Node = _ui_manager()
 	assert_not_null(manager, "应有 ui_manager")
-	if manager != null and manager.has_method("has_panel"):
+	if manager == null or chat == null:
+		return
+	if manager.has_method("has_panel"):
 		assert_true(manager.has_panel("chat"), "聊天框应注册进 ui_manager")
+	assert_false(_player.get("input_blocked"), "前置：无面板打开")
+	manager.open("chat")
+	await wait_process_frames(1)
+	assert_true(manager.is_open("chat"), "ui_manager.open(chat) 应命中面板契约")
+	assert_true(chat.is_open(), "聊天框契约 is_open() 应为真")
+	assert_false(_player.get("input_blocked"), "聊天框不屏蔽玩家输入（FR-M-02 AC1）")
+	manager.close_active()
+	await wait_process_frames(1)
+	assert_false(chat.is_open(), "close_active() 应经契约关闭聊天框")
 
 
 # 新手引导（FR-U-02 AC3 世界段）：走近河边触发一次 zone_river。
@@ -343,6 +380,8 @@ func test_river_hint_fires_once() -> void:
 	assert_false(tip.is_shown("zone_river"), "开场未触发河边字幕")
 	_player.global_position = Vector2(750, -20)
 	await wait_physics_frames(5)
+	# 新语义（包C-3）：入队≠已展示；出生区域横幅可能占着播放位，结算队列后再断言。
+	tip.advance(TIP_FLUSH_SECONDS)
 	assert_true(tip.is_shown("zone_river"), "走近河边应触发 zone_river")
 
 
@@ -401,6 +440,8 @@ func test_mine_breath_tip_fires_once_in_mine() -> void:
 	assert_true(gm.oxygen_net_rate() > 0.0, "草原氧气净速率应为正（前置条件）")
 	gm.set_zone("mine")
 	assert_true(gm.oxygen_net_rate() < 0.0, "矿洞氧气净速率应为负（前置条件）")
+	# 新语义（包C-3）：入队≠已展示；区域横幅可能占着播放位，结算队列后再断言。
+	tip.advance(TIP_FLUSH_SECONDS)
 	assert_true(tip.is_shown("sys_mine_breath"), "进入矿洞应触发 sys_mine_breath")
 
 
@@ -421,6 +462,9 @@ func test_photosynthesis_tip_day_only() -> void:
 	assert_false(gm.is_night(), "应已到清晨（前置条件）")
 	gm.set_zone("camp")
 	gm.set_zone("grassland")
+	# 新语义（包C-3）：入队≠已展示，_shown 在 _start 时才标记；
+	# 夜晚排队的区域横幅尚未播完，驱动 advance 结算队列后再断言。
+	tip.advance(TIP_FLUSH_SECONDS)
 	assert_true(tip.is_shown("zone_photosynthesis"), "白天进入草原应触发光合作用横幅")
 
 
@@ -471,3 +515,185 @@ func test_academy_gate_spawn_override() -> void:
 		root.has_meta("world_spawn_override"),
 		"出生点覆盖元数据应被一次性消费（D2）"
 	)
+
+
+# ==== 包A「世界与玩家手感」新增用例 ====
+
+# 包A-1：暂停菜单真暂停——打开时 get_tree().paused=true、三值 tick 停住，关闭恢复；
+# 菜单本体 process_mode=ALWAYS，否则暂停后按钮收不到输入。
+func test_pause_menu_truly_pauses_tree() -> void:
+	if _skip_unless_ready():
+		return
+	var pause: Node = _world.get_node_or_null(^"UILayer/PauseMenu")
+	assert_not_null(pause, "应有暂停菜单")
+	if pause == null:
+		return
+	assert_eq(int(pause.process_mode), int(Node.PROCESS_MODE_ALWAYS),
+		"暂停菜单须 process_mode=ALWAYS，否则暂停后按钮失效")
+	pause.open()
+	await wait_process_frames(1)
+	assert_true(get_tree().paused, "打开暂停菜单应暂停场景树")
+	var energy_at_pause: float = gm.energy
+	await wait_physics_frames(10)
+	assert_eq(gm.energy, energy_at_pause, "暂停时三值 tick 应停住")
+	pause.close()
+	await wait_process_frames(1)
+	assert_false(get_tree().paused, "关闭暂停菜单应恢复")
+
+
+# 包A-2：快捷栏尊重 input_blocked——模态面板打开时数字键不消耗道具、不生效。
+func test_hotkeys_blocked_when_panel_open() -> void:
+	if _skip_unless_ready():
+		return
+	var inventory: RefCounted = _player.get("inventory")
+	inventory.add_item("oxygen_tank", 1)
+	gm.modify_oxygen(-40.0)
+	_ui_manager().open("inventory")
+	await wait_process_frames(1)
+	assert_true(_player.get("input_blocked"), "前置：背包打开应屏蔽玩家输入")
+	var oxygen_before: float = gm.oxygen
+	var event: InputEventAction = InputEventAction.new()
+	event.action = "use_item_1"
+	event.pressed = true
+	_world._unhandled_input(event)
+	assert_eq(inventory.count_of("oxygen_tank"), 1, "面板打开时数字键不应消耗道具")
+	assert_almost_eq(gm.oxygen, oxygen_before, 0.001, "面板打开时数字键不应生效")
+	_ui_manager().close_active()
+
+
+# 包A-2 例外：图鉴 C 键在 input_blocked 时仍放行——图鉴自身是模态面板，
+# 若一并屏蔽，打开后将无法用 C 关闭。
+func test_codex_key_still_toggles_when_blocked() -> void:
+	if _skip_unless_ready():
+		return
+	var event: InputEventAction = InputEventAction.new()
+	event.action = "codex"
+	event.pressed = true
+	_world._unhandled_input(event)
+	await wait_process_frames(1)
+	assert_true(_ui_manager().is_open("codex"), "C 键应打开图鉴")
+	assert_true(_player.get("input_blocked"), "前置：图鉴打开时输入被屏蔽")
+	_world._unhandled_input(event)
+	await wait_process_frames(1)
+	assert_false(_ui_manager().is_open("codex"), "图鉴打开时 C 键应仍能关闭图鉴（例外放行）")
+
+
+# 包A-3：采集物生成后应围绕标记高度漂浮，不被 Tween 拉回 y=0
+# （生成顺序 bug：先入树触发 _ready 捕获 _base_y=0，后设位置被 Tween 拉回）。
+func test_collectables_stay_at_marker_height() -> void:
+	if _skip_unless_ready():
+		return
+	var markers: Node = _world.get_node_or_null(^"Map/CollectableSpawns")
+	assert_not_null(markers, "白盒地图应有 CollectableSpawns")
+	if markers == null or markers.get_child_count() == 0:
+		return
+	var base_y: float = (markers.get_child(0) as Marker2D).global_position.y
+	await wait_seconds(0.6) # 让漂浮 Tween 跑过一段，bug 会在此间显形
+	var container: Node = _world.get_node(^"Collectables")
+	assert_true(container.get_child_count() > 0, "应有采集物")
+	for child: Node in container.get_children():
+		assert_almost_eq((child as Node2D).global_position.y, base_y, 5.5,
+			"采集物 %s 应围绕标记高度漂浮，不被拉回 y=0" % str(child.get("substance_id")))
+
+
+# 包A-4：复活横跨地图传送后相机应立即对齐床边（reset_smoothing），不开平滑慢追。
+func test_camera_snaps_to_bed_after_respawn() -> void:
+	if _skip_unless_ready():
+		return
+	var cam: Camera2D = _player.get_node_or_null(^"%Camera") as Camera2D
+	var bed: Node = _world.get_node_or_null(^"Facilities/FacilityBed")
+	var death_screen: Node = _world.get_node_or_null(^"UILayer/DeathScreen")
+	assert_not_null(cam, "玩家应有 %Camera")
+	assert_not_null(bed, "营地应有床")
+	assert_not_null(death_screen, "应有死亡画面")
+	if cam == null or bed == null or death_screen == null:
+		return
+	_player.global_position = Vector2(2200.0, -20.0) # 矿洞深处，远离营地床
+	await wait_process_frames(2)
+	gm.modify_health(-999.0)
+	await wait_process_frames(2)
+	death_screen.confirm()
+	await wait_process_frames(3)
+	assert_almost_eq(cam.get_screen_center_position().x, (bed as Node2D).global_position.x, 60.0,
+		"复活传送后相机应立即对齐床边，而非横跨地图慢追")
+
+
+# 包A-6：区域触发器缝隙补齐——学院触发器（academy.tscn，覆盖 x -150..570）已填满
+# 草原↔营地带，真实缝隙是学院东缘（570）↔营地西缘（600）与营地东缘（1350）↔矿洞（1400）。
+# 从相邻区域走入才触发 body_entered：先在邻区落脚再进目标点。
+func test_zone_triggers_cover_former_gaps() -> void:
+	if _skip_unless_ready():
+		return
+	_player.global_position = Vector2(300.0, -20.0) # 学院区域落脚
+	await wait_physics_frames(3)
+	assert_eq(gm.current_zone(), "academy", "前置：x=300 应属学院区域")
+	_player.global_position = Vector2(585.0, -20.0) # 旧缝隙：学院东缘（570）↔营地西缘（600）
+	await wait_physics_frames(5)
+	assert_eq(gm.current_zone(), "camp", "学院↔营地旧缝隙（x=585）应归属营地")
+	_player.global_position = Vector2(1900.0, -20.0) # 矿洞中心落脚
+	await wait_physics_frames(3)
+	_player.global_position = Vector2(1375.0, -20.0) # 旧缝隙：营地↔矿洞
+	await wait_physics_frames(5)
+	assert_eq(gm.current_zone(), "camp", "营地↔矿洞旧缝隙（x=1375）应归属营地")
+
+
+# 包A-8：受伤触发相机小幅震动，震动结束 offset 精确复位。
+func test_hurt_triggers_camera_shake() -> void:
+	if _skip_unless_ready():
+		return
+	var cam: Camera2D = _player.get_node_or_null(^"%Camera") as Camera2D
+	assert_not_null(cam, "玩家应有 %Camera")
+	if cam == null:
+		return
+	assert_true(cam.has_method("shake"), "相机应提供 shake(intensity, duration)")
+	gm.modify_health(-5.0)
+	await wait_process_frames(2)
+	assert_gt(cam.offset.length(), 0.1, "受伤应触发相机震动")
+	await wait_seconds(0.5)
+	assert_almost_eq(cam.offset.length(), 0.0, 0.001, "震动结束后 offset 应精确复位")
+
+
+# 包A-8：爆炸事件接线相机震动（氢气事件 explosion_triggered → 世界 → 相机 shake）。
+# 白盒断言连接关系：行为复用 test_hurt_triggers_camera_shake 已验证的 shake 本体。
+func test_explosion_event_wired_to_camera_shake() -> void:
+	if _skip_unless_ready():
+		return
+	var hydrogen: Variant = _world.get("_hydrogen")
+	assert_not_null(hydrogen, "世界应有氢气事件实例")
+	if hydrogen == null:
+		return
+	var found: bool = false
+	for connection: Dictionary in (hydrogen as Object).get_signal_connection_list(&"explosion_triggered"):
+		var callable: Callable = connection.get("callable", Callable())
+		if callable.get_object() == _world:
+			found = true
+			break
+	assert_true(found, "世界应把 explosion_triggered 接到相机震动")
+
+
+# 收口W1-4：DeathScreen 纳入 Esc 裁决——死亡画面打开时按 Esc，
+# ui_manager 在 _input 层吞掉：不叠开暂停菜单、不暂停场景树、不关死亡画面。
+func test_esc_swallowed_while_death_screen_open() -> void:
+	if _skip_unless_ready():
+		return
+	var death_screen: Node = _world.get_node_or_null(^"UILayer/DeathScreen")
+	var pause: Node = _world.get_node_or_null(^"UILayer/PauseMenu")
+	assert_not_null(death_screen, "应有死亡画面")
+	assert_not_null(pause, "应有暂停菜单")
+	if death_screen == null or pause == null:
+		return
+	gm.modify_health(-999.0)
+	await wait_process_frames(2)
+	assert_true(death_screen.is_open(), "前置：死亡画面已打开")
+	var event: InputEventAction = InputEventAction.new()
+	event.action = "pause"
+	event.pressed = true
+	Input.parse_input_event(event)
+	await wait_process_frames(2)
+	assert_true(death_screen.is_open(), "Esc 不许关闭死亡画面")
+	assert_false(pause.visible, "死亡画面打开时 Esc 不许叠开暂停菜单")
+	assert_false(get_tree().paused, "死亡画面打开时 Esc 不许暂停场景树")
+	# 清理：确认复活回床，避免死亡状态拖垮后续用例。
+	death_screen.confirm()
+	await wait_process_frames(2)
+	assert_false(death_screen.is_open(), "确认后死亡画面应关闭")

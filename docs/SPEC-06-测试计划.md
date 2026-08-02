@@ -87,7 +87,7 @@
 |---|---|---|---|
 | UT-G02 | FR-G-02 | `test_inventory.gd` | 堆叠到 99 后溢出新格；背包满时返回未装入数量；`remove_item` 数量不足返回 false 且状态不变；8 格快捷栏边界 |
 | UT-G03 | FR-G-03 | `test_discovery.gd` | 重复拾取只计一次；`is_discovered` 正确；计数集合恰好 16（`co2` 不计入） |
-| UT-G04 | FR-G-04 | `test_recipe_db.gd` | **11 条配方逐条正例 + 至少一反例**；材料顺序无关；`wrong_condition` 与 `no_match` 区分正确；`requires_pure_check` 未解锁时返回 `needs_purity_check`；返回字典字段齐全；无歧义三元组 |
+| UT-G04 | FR-G-04 | `test_recipe_db.gd` | **12 条配方逐条正例 + 至少一反例**；材料顺序无关；`wrong_condition` 与 `no_match` 区分正确；`requires_pure_check` 未解锁时返回 `needs_purity_check`；返回字典字段齐全；无歧义三元组 |
 | UT-G07 | FR-G-07 | `test_fail_messages.gd` | 三类失败文案不混用；连续两次同类失败文案不同（确定性轮转） |
 | UT-G12 | FR-G-12 | `test_items.gd` | 每个道具效果值读自 balance；装备型不消耗、消耗型 -1；氧气瓶 +50、活性炭砸幽灵 |
 
@@ -113,10 +113,10 @@
 | 编号 | FR | 文件 | 关键断言 |
 |---|---|---|---|
 | UT-D01 | FR-D-01 | `test_data_substances.gd` | 17 条记录、id 唯一；HUD 计数集合恰好 16；`category` 在枚举内；`tip_id` 在 tips 表存在；icon 路径存在 |
-| UT-D02 | FR-D-02 | `test_data_recipes.gd` | 11 条、id 唯一；有且仅有一条 `requires_pure_check`；`tool`/`condition` 枚举合法；inputs/outputs 可解析；三元组无歧义 |
+| UT-D02 | FR-D-02 | `test_data_recipes.gd` | 12 条、id 唯一；有且仅有一条 `requires_pure_check`；`tool`/`condition` 枚举合法；inputs/outputs 可解析；三元组无歧义 |
 | UT-D03 | FR-D-03 | `test_data_tips.gd` | id 唯一；style 枚举；文案非空；SPEC-05 §3 列出的每个 id 存在 |
 | UT-D04 | FR-D-04 | `test_data_mentors.gd` | 恰好 4 条且 id 集合正确；必填字段齐全；monitor prompt 含三个 @ 关键字；其余三位含"绝不出现 @" |
-| UT-D05 | FR-D-05 | `test_data_qa.gd` | ≥20 条（当前 24 条）；keywords/answer 非空；涉及反应的答案含方程式（含 `=` 或 `→`） |
+| UT-D05 | FR-D-05 | `test_data_qa.gd` | ≥20 条（当前 34 条）；keywords/answer 非空（兜底行 `qa_no_match` 的 keywords 允许为空）；涉及反应的答案含方程式（含 `=` 或 `→`） |
 | UT-D06 | FR-D-06 | `test_data_worldmap.gd` | 13 条；恰好 5 条 unlocked；解锁项 brief 非空、未解锁项 teaser 非空；热区不越出 640×360 |
 | UT-D07 | FR-D-07 | `test_validator.gd` | 喂入 10 类坏数据（见 [SPEC-04 §12](SPEC-04-数据模型.md)）逐类必须报错；好数据退出码 0 |
 
@@ -148,6 +148,7 @@
 | IT-G13 | FR-G-13 | 过滤器水→纯净水 + 四步字幕；电解器 1:2 产量 + 字幕；篝火 +40 能量与旁边回血；床走 IT-C05 |
 | IT-G14 | FR-G-14 | 三步必须顺序完成、跳步无产物；完成得 `nacl` + 物理变化卡片；肥皂水对湖水出 `sys_hardwater` |
 | IT-G15 | FR-G-15 | E 进交易态 + prompt 字幕；数字键卖出道具 +20 能量；已装备先卸下；空格/物质不卖不扣；取消与走远退出 |
+| IT-G16 | FR-G-16 | 池内生命按 `damage.cuso4_pool_per_second`（5/s）下降、离开停止；首次接近触发一次 `warn_cuso4`；池内致死走正常死亡流程 |
 | IT-M01 | FR-M-01 | 四房间各一位导师且 `room` 与数据表一致；学院内不耗氧、怪物不入；走近出提问气泡 |
 | IT-M02 | FR-M-02 | 聊天框打开时世界不暂停不切场景；逐字打字期间立绘为 talk、结束回 idle；记录可滚动；Esc 收起恢复操作 |
 | IT-M07 | FR-M-07 | stub 断言请求体含 system+user、`max_tokens≈300`、`temperature=0.7`；历史仅 4 轮；无 key 时进离线不崩溃；**key 不出现在日志中** |
@@ -155,8 +156,9 @@
 | IT-U03 | FR-U-03 | 主菜单与 M 键均可打开；13 热区齐全且状态与数据表一致；解锁项显示 brief、未解锁抖动 + teaser 且不可进入 |
 | IT-U04 | FR-U-04 | 网格 17 格齐全；已收集彩色 + 分类标签；未收集剪影不泄露名称；卡片可翻页；主菜单与游戏内数据一致 |
 | IT-U05 | FR-U-05 | 打开时玩家输入被屏蔽；图标缺失显示占位不崩溃 |
+| IT-U06 | FR-U-06 | 合成/背包/卡片模态面板按视口比例铺开（宽 76%/70%/80%、高 60%/70%/70%）且居中；主菜单/暂停菜单按钮组居中；死亡画面文案垂直中心锚点 |
 
-**集成测试合计 25 项。**
+**集成测试合计 27 项。**
 
 ---
 
@@ -193,6 +195,7 @@
 | FR-G-13 | 4 | IT-G13 | 清单 6 | P2-2 |
 | FR-G-14 | 3 | IT-G14 | 清单 3 | P2-14 |
 | FR-G-15 | 5 | IT-G15 | 清单 11 | P2-15 |
+| FR-G-16 | 3 | IT-G16 | 清单 16 | —（P3 阶段补做项） |
 | FR-M-01 | 3 | IT-M01 | 清单 9 | P2-7 |
 | FR-M-02 | 4 | IT-M02 | 清单 9 | P2-7 |
 | FR-M-03 | 3 | UT-M03 | — | P2-7 |
@@ -208,6 +211,7 @@
 | FR-U-03 | 4 | IT-U03 | 清单 4 | P2-3 |
 | FR-U-04 | 4 | IT-U04 | 清单 13 | P2-13 |
 | FR-U-05 | 2 | IT-U05 | 清单 2 | P1-4 |
+| FR-U-06 | 4 | IT-U06 | — | P3-9 |
 | FR-D-01 | 3 | UT-D01 | — | P0-5 |
 | FR-D-02 | 3 | UT-D02 | — | P0-5 |
 | FR-D-03 | 3 | UT-D03 | — | P0-5 |
@@ -221,7 +225,7 @@
 | FR-B-03 | 2 | — | MT-B03 | P3-5 |
 | FR-B-04 | 3 | — | MT-B04 | P3-7 |
 
-覆盖统计：54 条 FR 中 **49 条有自动化测试**，5 条纯手工验收——`FR-U-02`（主观引导体验）、`FR-B-01..04`（构建/断网/干净机/视频交付）。
+覆盖统计：55 条 FR 中 **50 条有自动化测试**，5 条纯手工验收——`FR-U-02`（主观引导体验）、`FR-B-01..04`（构建/断网/干净机/视频交付）。
 `FR-M-10` 为**半自动**：接线部分由 IT-M10 断言（转发、同步、滑块不生效、文案来源），肉眼可见部分（滑块能拖、文字在屏幕上）仍按 MT-M10 人工确认。
 这些手工项必须在 H18 按 §7 逐条人工打勾。
 

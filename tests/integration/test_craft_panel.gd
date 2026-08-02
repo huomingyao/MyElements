@@ -178,15 +178,29 @@ func test_tool_options_are_three() -> void:
 	assert_eq(_panel.tool_options(), ["portable", "alcohol_lamp", "bench"], "器材三选项")
 
 
-# FR-G-08 AC1：获得 H₂ 后合成界面出现「点燃」选项（按钮存在且可用）。
+# FR-G-08 AC1（包B-A6）：仅当背包或合成槽内有 H₂ 时「点燃」选项才可见（此前恒可见）。
 func test_ignite_button_available_with_hydrogen() -> void:
 	if _skip_unless_ready([]):
 		return
 	var button: Node = _panel.get_node_or_null(^"%IgniteButton")
 	assert_not_null(button, "应有 %IgniteButton")
-	if button != null:
-		assert_true(button.visible, "点燃按钮应可见（获得 H₂ 后可点）")
-		assert_false(button.disabled, "点燃按钮不应禁用")
+	if button == null:
+		return
+	_panel.open()
+	assert_false(button.visible, "没有 H₂ 时点燃按钮应隐藏（FR-G-08 AC1）")
+	_inventory.add_item("h2", 1)
+	_panel._refresh()
+	assert_true(button.visible, "背包获得 H₂ 后应出现「点燃」选项")
+	assert_false(button.disabled, "点燃按钮不应禁用")
+	# H₂ 入合成槽后背包扣出，按钮仍应可见（槽内也算持有）。
+	_panel.add_material("h2")
+	assert_eq(_inventory.count_of("h2"), 0, "入格后背包应扣出 H₂（前置）")
+	assert_true(button.visible, "合成槽内有 H₂ 时点燃按钮仍应可见")
+	# 取回材料并消耗掉 H₂：按钮重新隐藏。
+	_panel.remove_material_at(0)
+	_inventory.remove_item("h2", 1)
+	_panel._refresh()
+	assert_false(button.visible, "H₂ 用掉后点燃按钮应重新隐藏")
 
 
 # FR-G-08 AC2/AC3 界面段：未验纯点燃 H₂+O₂ → 生命精确 -50 + 置标记，材料不消耗。

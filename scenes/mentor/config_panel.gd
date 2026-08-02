@@ -6,12 +6,18 @@ extends Control
 
 # ==== 常量区 ====
 const UI_CONFIG_NOTE: String = "config_note"
+# Apply 按钮文案（包A-3 / NFR-04 收口：不再用场景里硬编码的 "OK"）。
+const UI_CONFIG_APPLY: String = "config_apply"
 const GAME_MANAGER_PATH: NodePath = ^"/root/GameManager"
 const LLM_CLIENT_PATH: NodePath = ^"/root/LLMClient"
+# 世界总装里的裁决器（SPEC-03 §8：world.tscn 的 UILayer/UIManager），按祖先链惰性解析。
+const UI_MANAGER_REL: NodePath = ^"UILayer/UIManager"
+const PANEL_CONFIG: String = "config"
 
 # ==== 状态区 ====
 # 测试注入的假客户端（SPEC-03 §6.4 非契约辅助）；未注入时 _ready() 取 autoload。
 var _client: Node = null
+var _open: bool = false
 
 @onready var _key_input: LineEdit = %KeyInput
 @onready var _apply_button: Button = %ApplyButton
@@ -27,9 +33,33 @@ func _ready() -> void:
 	# key 绝不明文显示（NFR-05）。
 	_key_input.secret = true
 	_note.text = note_text()
+	_apply_button.text = _ui_string(UI_CONFIG_APPLY)
 	_apply_button.pressed.connect(_on_apply_pressed)
 	_offline_toggle.toggled.connect(set_offline_toggle)
 	_sync_offline_toggle()
+	# 初始隐藏，等 ui_manager 打开（包A-3：面板经裁决器驱动，不自作主张显示）。
+	visible = false
+	# 自注册进世界面板体系（包A-3 可达性修复）：打开/互斥/Esc 收口全走 ui_manager 裁决。
+	# 独立实例化（测试）时找不到裁决器，静默跳过。
+	var manager: Node = _find_ui_manager()
+	if manager != null:
+		manager.register_panel(PANEL_CONFIG, self, true)
+
+
+# ==== ui_manager 面板契约（SPEC-03 §8，与 chat_panel 同一形状）====
+func open() -> void:
+	_open = true
+	visible = true
+	_sync_offline_toggle()
+
+
+func close() -> void:
+	_open = false
+	visible = false
+
+
+func is_open() -> bool:
+	return _open
 
 
 # 测试注入口（SPEC-03 §6.4 非契约辅助）：注入后不碰真实 autoload，也就不碰真实 config.cfg。
@@ -66,10 +96,25 @@ func personality() -> float:
 
 
 func note_text() -> String:
+	return _ui_string(UI_CONFIG_NOTE)
+
+
+func _ui_string(key: String) -> String:
 	var gm: Node = get_node_or_null(GAME_MANAGER_PATH)
 	if gm == null:
-		return UI_CONFIG_NOTE
-	return gm.get_ui_string(UI_CONFIG_NOTE)
+		return key
+	return gm.get_ui_string(key)
+
+
+# 沿祖先链找世界总装里的 UIManager；独立实例化（测试）时找不到返回 null。
+func _find_ui_manager() -> Node:
+	var node: Node = self
+	while node != null:
+		var candidate: Node = node.get_node_or_null(UI_MANAGER_REL)
+		if candidate != null and candidate.has_method("register_panel"):
+			return candidate
+		node = node.get_parent()
+	return null
 
 
 func _on_apply_pressed() -> void:

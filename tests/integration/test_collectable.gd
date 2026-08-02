@@ -151,6 +151,29 @@ func test_pickup_plays_sound_when_stream_assigned() -> void:
 	assert_true(player_node.playing, "有 stream 时拾取应播放音效")
 
 
+# 包A-9：有音效在播时拾取不得立即 queue_free（会掐断音频），应等播放结束再销毁。
+func test_pickup_with_stream_delays_free_until_sound_finished() -> void:
+	var node: Node = await _spawn("o2")
+	if node == null:
+		return
+	var player_node: AudioStreamPlayer = node.get_node_or_null(^"%PickupPlayer") as AudioStreamPlayer
+	if player_node == null:
+		fail_test("采集物应有 %PickupPlayer 拾取音效挂载点")
+		return
+	var wav := AudioStreamWAV.new()
+	wav.format = AudioStreamWAV.FORMAT_8_BITS
+	wav.mix_rate = 8000
+	wav.data = PackedByteArray([128, 128, 128, 128])
+	player_node.stream = wav
+	var player: FakePlayer = _make_player()
+	node.interact(player)
+	assert_true(player_node.playing, "有 stream 时拾取应播放音效")
+	assert_false(node.is_queued_for_deletion(), "播放中不应立即销毁（立即 free 会掐断音频）")
+	assert_false(node.visible, "等待销毁期间应隐藏本体")
+	assert_true(player_node.finished.is_connected(Callable(node, "queue_free")),
+		"应接好播放结束后再销毁")
+
+
 # AC2：拾取后物品进背包、采集物消失；并发出 collected 信号（世界接线首次统计用）。
 func test_pickup_adds_to_inventory_and_frees() -> void:
 	var node: Node = await _spawn("o2")
@@ -213,6 +236,36 @@ func test_picked_collectable_cannot_interact_again() -> void:
 	var player: FakePlayer = _make_player()
 	node.interact(player)
 	assert_false(bool(node.can_interact()), "已拾取后 can_interact 应为 false")
+
+
+# 模块化重构（视觉逻辑分离）：视觉/音频拆成独立命名容器，
+# 各可见部件是 Visuals 下的独立节点，可针对单个部件修改。
+func test_modular_node_structure() -> void:
+	var node: Node = await _spawn("o2")
+	if node == null:
+		return
+	var visuals: Node = node.get_node_or_null(^"%Visuals")
+	assert_not_null(visuals, "采集物应有 %Visuals 视觉容器（模块化重构）")
+	if visuals == null:
+		return
+	assert_true(visuals is Node2D, "视觉容器应为 Node2D")
+	var glow: Node = node.get_node_or_null(^"%Glow")
+	assert_not_null(glow, "应有 %Glow 发光部件")
+	if glow != null:
+		assert_true(glow is Polygon2D, "发光部件应为 Polygon2D")
+		assert_eq(glow.get_parent(), visuals, "%Glow 应挂在 %Visuals 容器下")
+	var icon: Node = node.get_node_or_null(^"%IconSprite")
+	assert_not_null(icon, "应有 %IconSprite 图标部件")
+	if icon != null:
+		assert_eq(icon.get_parent(), visuals, "%IconSprite 应挂在 %Visuals 容器下")
+	var audio: Node = node.get_node_or_null(^"%Audio")
+	assert_not_null(audio, "应有 %Audio 音频容器")
+	if audio == null:
+		return
+	var pickup: Node = node.get_node_or_null(^"%PickupPlayer")
+	assert_not_null(pickup, "应有 %PickupPlayer 音效节点")
+	if pickup != null:
+		assert_eq(pickup.get_parent(), audio, "%PickupPlayer 应挂在 %Audio 容器下")
 
 
 # NFR-04：逻辑代码里不许出现中文字面量（注释除外）。

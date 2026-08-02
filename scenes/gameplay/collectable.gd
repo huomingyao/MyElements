@@ -33,6 +33,9 @@ var _record: Dictionary = {}
 var _picked: bool = false
 var _base_y: float = 0.0
 
+# 视觉逻辑分离（模块化重构）：视觉部件各自独立节点（%Visuals 容器下），
+# 音频进 %Audio 容器；下方方法按部件拆分，改单个部件不碰其他部件。
+@onready var _visuals: Node2D = %Visuals
 @onready var _glow: Polygon2D = %Glow
 @onready var _icon: Sprite2D = %IconSprite
 @onready var _pickup_audio: AudioStreamPlayer = %PickupPlayer
@@ -41,8 +44,10 @@ var _base_y: float = 0.0
 func _ready() -> void:
 	_base_y = position.y
 	_resolve_record()
-	_apply_visuals()
-	_start_float()
+	_apply_glow()
+	_apply_icon()
+	_tween_float()
+	_tween_glow()
 
 
 # 世界生成入口（运行时注入 id；与 @export 摆放等价）。
@@ -51,7 +56,8 @@ func setup(id_value: String) -> void:
 	_picked = false
 	if is_node_ready():
 		_resolve_record()
-		_apply_visuals()
+		_apply_glow()
+		_apply_icon()
 
 
 # AC1 的可观测口：当前解析出的数据表记录（副本；未知 id 为空字典）。
@@ -84,7 +90,7 @@ func interact(player: Node) -> void:
 	_play_pickup_sound()
 	_show_tip(str(_record.get(KEY_TIP, "")))
 	collected.emit(substance_id)
-	queue_free()
+	_free_after_sound()
 
 
 # ==== 内部 ====
@@ -110,24 +116,29 @@ func _resolve_record() -> void:
 	push_warning("[collect] 数据表中不存在的 id：%s（不可交互）" % substance_id)
 
 
-# 图标缺失时用 id 散列稳定色占位（同一物质颜色局内一致，美术到位后自然被贴图替换）。
-func _apply_visuals() -> void:
+# 发光部件：图标缺失时用 id 散列稳定色占位（同一物质颜色局内一致，美术到位后自然被贴图替换）。
+func _apply_glow() -> void:
 	if _record.is_empty():
-		visible = false
+		_visuals.visible = false
 		return
-	visible = true
+	_visuals.visible = true
 	var hue: float = float(substance_id.hash() % 360) / 360.0
 	var color: Color = Color.from_hsv(hue, 0.65, 1.0, 0.9)
 	if _glow != null:
 		_glow.color = color
 		_glow.polygon = _circle_polygon(GLOW_RADIUS, 12)
+
+
+# 图标部件：有贴图则显示，缺失时隐藏不空白（P4 美术替换入口）。
+func _apply_icon() -> void:
 	var icon_path: String = str(_record.get(KEY_ICON, ""))
-	if _icon != null:
-		if not icon_path.is_empty() and ResourceLoader.exists(icon_path):
-			_icon.texture = load(icon_path) as Texture2D
-			_icon.visible = true
-		else:
-			_icon.visible = false
+	if _icon == null:
+		return
+	if not icon_path.is_empty() and ResourceLoader.exists(icon_path):
+		_icon.texture = load(icon_path) as Texture2D
+		_icon.visible = true
+	else:
+		_icon.visible = false
 
 
 func _circle_polygon(radius: float, segments: int) -> PackedVector2Array:
@@ -138,15 +149,22 @@ func _circle_polygon(radius: float, segments: int) -> PackedVector2Array:
 	return points
 
 
-# 漂浮 + 发光呼吸（Tween 驱动，不占 _process）。
-func _start_float() -> void:
+# 漂浮动画（Tween 驱动，不占 _process）：只动本体位置。
+func _tween_float() -> void:
 	var tween: Tween = create_tween().set_loops()
 	tween.set_parallel(true)
 	tween.tween_property(self, "position:y", _base_y - FLOAT_AMPLITUDE, FLOAT_HALF_PERIOD)
 	tween.tween_property(self, "position:y", _base_y, FLOAT_HALF_PERIOD).set_delay(FLOAT_HALF_PERIOD)
-	if _glow != null:
-		tween.tween_property(_glow, "modulate:a", GLOW_ALPHA_LOW, FLOAT_HALF_PERIOD)
-		tween.tween_property(_glow, "modulate:a", 1.0, FLOAT_HALF_PERIOD).set_delay(FLOAT_HALF_PERIOD)
+
+
+# 发光呼吸（Tween 驱动）：只动发光部件的透明度，与其他部件解耦。
+func _tween_glow() -> void:
+	if _glow == null:
+		return
+	var tween: Tween = create_tween().set_loops()
+	tween.set_parallel(true)
+	tween.tween_property(_glow, "modulate:a", GLOW_ALPHA_LOW, FLOAT_HALF_PERIOD)
+	tween.tween_property(_glow, "modulate:a", 1.0, FLOAT_HALF_PERIOD).set_delay(FLOAT_HALF_PERIOD)
 
 
 func _show_tip(tip_id: String) -> void:
@@ -161,6 +179,16 @@ func _show_tip(tip_id: String) -> void:
 func _play_pickup_sound() -> void:
 	if _pickup_audio != null and _pickup_audio.stream != null:
 		_pickup_audio.play()
+
+
+# 销毁时机（包A-9）：有音效在播时等播放结束再 free——立即 free 会把子节点的音频一起掐断。
+# 等待期间隐藏本体；交互已由 _picked 置位挡掉。
+func _free_after_sound() -> void:
+	if _pickup_audio != null and _pickup_audio.playing:
+		visible = false
+		_pickup_audio.finished.connect(queue_free, CONNECT_ONE_SHOT)
+		return
+	queue_free()
 
 
 # 玩家背包的约定入口（同 facility_base.gd 的鸭子类型约定）。

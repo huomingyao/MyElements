@@ -28,6 +28,18 @@ func before_each() -> void:
 	gm.set_flag("purity_check_unlocked", false)
 
 
+# 通用 no_match 轮转池的条数：fail_copper_acid 是铜+酸专属彩蛋（包B-A7），不计入通用池。
+func _generic_no_match_pool_size() -> int:
+	var size: int = 0
+	for row: Dictionary in db.all_fail_messages():
+		if str(row.get("reason", "")) != "no_match":
+			continue
+		if str(row.get("id", "")) == "fail_copper_acid":
+			continue
+		size += 1
+	return size
+
+
 # 制造一次 no_match 失败并返回 fail_tip_id。
 func _no_match_id() -> String:
 	return str(db.try_craft(["stick", "stick"], "bench", "none").get("fail_tip_id", ""))
@@ -110,12 +122,10 @@ func test_rotation_is_deterministic_after_reset() -> void:
 
 
 # 轮转走满一圈后回到第一条（取模，不越界、不停在最后一条）。
+# 包B-A7：fail_copper_acid 已移出通用轮转池，池长按通用条数计算。
 func test_rotation_wraps_around_pool() -> void:
-	var pool_size: int = 0
-	for row: Dictionary in db.all_fail_messages():
-		if str(row.get("reason", "")) == "no_match":
-			pool_size += 1
-	assert_gt(pool_size, 1, "no_match 池应有多条")
+	var pool_size: int = _generic_no_match_pool_size()
+	assert_gt(pool_size, 1, "no_match 通用池应有多条")
 	var first: String = _no_match_id()
 	var seen: Array[String] = [first]
 	for i: int in pool_size - 1:
@@ -127,6 +137,31 @@ func test_rotation_wraps_around_pool() -> void:
 	for id: String in seen:
 		unique[id] = true
 	assert_eq(unique.size(), pool_size, "一圈内不应出现重复文案")
+
+
+# 包B-A7（FR-G-07 口径）：铜+酸组合命中专属彩蛋文案，且确定性返回（顺序无关、不随机）。
+func test_copper_acid_combo_returns_easter_egg_message() -> void:
+	var first: Dictionary = db.try_craft(["cu", "hcl"], "bench", "none")
+	assert_eq(str(first.get("fail_reason", "")), "no_match", "铜+酸应报 no_match")
+	assert_eq(str(first.get("fail_tip_id", "")), "fail_copper_acid", "铜+酸应命中彩蛋文案")
+	var second: Dictionary = db.try_craft(["hcl", "cu"], "portable", "none")
+	assert_eq(str(second.get("fail_tip_id", "")), "fail_copper_acid", "彩蛋文案应确定性返回（顺序无关）")
+
+
+# 包B-A7：通用 no_match 池转满一圈也不许轮出铜酸彩蛋。
+func test_generic_no_match_pool_excludes_copper_acid() -> void:
+	var pool_size: int = _generic_no_match_pool_size()
+	for i: int in pool_size + 1:
+		var id: String = _no_match_id()
+		assert_ne(id, "fail_copper_acid", "通用 no_match 池不许轮出铜酸彩蛋（FR-G-07 口径）")
+
+
+# 包B-A7：彩蛋路径不消耗通用池的轮转位置（各池确定性互不干扰）。
+func test_copper_acid_does_not_consume_generic_rotation() -> void:
+	var expected: String = _no_match_id()
+	db.reset_rotation()
+	db.try_craft(["cu", "hcl"], "bench", "none")
+	assert_eq(_no_match_id(), expected, "彩蛋文案不应推进通用池轮转")
 
 
 # 失败文案的 text 非空且来自数据表（调用方靠它走 show_custom 显示）。

@@ -1,4 +1,4 @@
-[gd_scene load_steps=31 format=3]
+[gd_scene load_steps=32 format=3]
 
 [ext_resource type="Script" path="res://scenes/main/world.gd" id="1_world"]
 [ext_resource type="Script" path="res://scenes/main/zone_trigger.gd" id="2_zone"]
@@ -26,6 +26,7 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/death_screen.tscn" id="28_death"]
 [ext_resource type="PackedScene" path="res://scenes/main/pause_menu.tscn" id="29_pause"]
 [ext_resource type="PackedScene" path="res://scenes/main/facility_signpost.tscn" id="31_signpost"]
+[ext_resource type="PackedScene" path="res://scenes/gameplay/cuso4_pool.tscn" id="32_cuso4pool"]
 
 [sub_resource type="RectangleShape2D" id="zone_saltlake"]
 size = Vector2(1000, 120)
@@ -34,7 +35,7 @@ size = Vector2(1000, 120)
 size = Vector2(550, 120)
 
 [sub_resource type="RectangleShape2D" id="zone_camp"]
-size = Vector2(750, 120)
+size = Vector2(830, 120)
 
 [sub_resource type="RectangleShape2D" id="zone_mine"]
 size = Vector2(1000, 120)
@@ -69,7 +70,7 @@ zone_id = "grassland"
 shape = SubResource("zone_grassland")
 
 [node name="CampTrigger" type="Area2D" parent="ZoneTriggers"]
-position = Vector2(975, -20)
+position = Vector2(985, -20)
 script = ExtResource("2_zone")
 zone_id = "camp"
 
@@ -130,6 +131,9 @@ position = Vector2(2000, -30)
 
 [node name="MistSpawner" type="Node2D" parent="Monsters"]
 script = ExtResource("3_spawner")
+
+[node name="Cuso4Pool" parent="." instance=ExtResource("32_cuso4pool")]
+position = Vector2(1720, -20)
 
 [node name="AcademyBuilding" parent="." instance=ExtResource("19_academy")]
 position = Vector2(-110, -40)

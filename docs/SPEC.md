@@ -6,7 +6,7 @@
 - 版本：v1.0（MVP / 20 小时比赛版）
 - 引擎：Godot 4.6.3-stable + GDScript
 - 开发方式：SSD（规格驱动）+ TDD（测试驱动）+ 多子 Agent 并行
-- 状态：**规格阶段完成，实现未开始**
+- 状态：**Phase 0–2 收口 + 审计偏差修复完成（包A/B/C 七项 A1..A7 全 fixed，650/650 全绿），Phase 3 打磨交付进行中（CuSO₄ 池/占位美术施工）**
 
 ---
 
@@ -23,6 +23,8 @@
 | [SPEC-07-实施计划与Agent派活.md](SPEC-07-实施计划与Agent派活.md) | 20 小时时刻表、五人分工、子 Agent 任务包与派活模板 | 主 Agent / P1 |
 | [SPEC-08-美术与音频管线.md](SPEC-08-美术与音频管线.md) | 像素规格、调色板、命名、生成流程、素材来源 | P4/P5 |
 | [SPEC-09-构建与交付.md](SPEC-09-构建与交付.md) | 导出预设、演示包、断网验证、视频与 PPT 交付 | P1/P5 |
+| [SPEC-10-网页版移植方案.md](SPEC-10-网页版移植方案.md) | 网页版技术路线、系统映射、LLM 浏览器方案、部署与阶段计划 | 所有要参与网页版的人 |
+| [SPEC-WEB-网页版完整规格.md](SPEC-WEB-网页版完整规格.md) | 网页版唯一事实来源：需求/设计/接口/数据/文案/测试/计划/管线/交付全合集 | 网页版开发者（只读此册） |
 
 规范与纪律（会话规则、SSD/TDD 铁律、目录责任、编码规范、Git）见仓库根 `CLAUDE.md`。
 
@@ -102,6 +104,7 @@
 - [ ] P3-6 断网全流程测试（FR-B-02）
 - [ ] P3-7 演示视频 3 分钟 + PPT/讲稿（SPEC-09 §4..5）
 - [ ] P3-8 交付打包（U 盘 ×2 + 云盘）
+- [x] P3-9 UI 面板自适应布局（FR-U-06，IT-U06 6 项全绿）
 
 ---
 
@@ -119,3 +122,9 @@ FR → 验收标准 → 测试用例 → Checklist 项 的完整映射见
 | 2026-08-01 | v1.0 | 由 `plan/` 三份草案重写为九册规格文档集，引入 FR/AC/测试编号体系 | 用户 |
 | 2026-08-02 | v1.1 | TP-17 世界总装 + 四个 UI 件（合成台/卡片/背包/字幕层）+ 导师验纯解锁接线落地；SPEC-02 §8 补 `codex` 热键、SPEC-05 §1 试剂三物来源裁决、§9 新增 7 个 ui_strings 键、SPEC-03 §9 补 8 行变更记录 | 主 Agent |
 | 2026-08-02 | v1.2 | WORKLOG A/B 级缺口全收口（碳口罩落地+幽灵 AC5 免疫、电解器灌装氧气瓶、路牌开地图页、氧气 70 教程提示、矿洞呼吸/光合作用字幕、R3 低氧点燃、unlock_tip 消费、ViewLight 兜底、HUD 语义色、学院门传送 D2）；SPEC-01 FR-G-10 增 AC5、FR-C-08 AC1 记 D2；SPEC-05 §1/§3.2/§8、SPEC-02 §4.4/§5、SPEC-04 §10、SPEC-08 §6、SPEC-09 §3.1 同步；交付骨架 README.txt/export_presets.cfg/BUGS.md 落地 | 主 Agent |
+| 2026-08-02 | v1.3 | 对标优化文档同步（PLAN-benchmark-optimization Wave 1 五包 27 项落地后）：头部状态行由「实现未开始」更正为真实进度；SPEC-05 §9 补登 `death_info`/`death_day`/`death_hint` 三键；SPEC-02 §4.10 tips 条数 47→51、§4.1/§4.6 补 `items.campfire_daily_limit` 与 `monsters.acid_mist_lifetime_seconds` 口径；SPEC-03 §9 补 4 行变更记录（once 标记时机+warning 打断 banner 回写、set_reply_provider {text,offline} 扩展、reply_chunk 不发射、world_map 静态解锁）；BUGS.md 登记 Wave 1 修复 26 条 + 新发现 8 条；WORKLOG.md 追加对标优化批次；plan/ 四份草案标注废弃 | 主 Agent |
+| 2026-08-02 | v1.4 | 包D「spec 文档回写」（五路并行审计后，以码为准只改文档）：配方 12 / tips 51 / qa_fallback 34 / fail_messages 9 全册对齐；新增 FR-G-16 CuSO₄ 溶液池（54→55 条 FR，P1/IT-G16，P3 补做项）；SPEC-02 `night_tint`→`night_brightness`；FR-M-05 AC1 按 SPEC-03 §6.1 口径（≤3 条）；FR-M-10 AC2 按 B-024 裁决（隐藏死 UI 滑块 + config_note）；SPEC-07 §6 收录七条对标大件；BUGS.md 登记 B-039..B-045（包A/B/C 修复中）并将 B-035..B-038 转赛后清单；SPEC-03 §9 为包A/B/C 预留四行占位；WORKLOG 测试基线 547→610 | 主 Agent |
+| 2026-08-02 | v1.5 | 新增 SPEC-10 网页版移植方案（路线 A/B 对比、推荐 Web 原生重写、FR→TS 模块映射、LLM key 安全方案、Phase W0–W4 计划） | 用户 |
+| 2026-08-02 | v1.6 | 包E3「文档收口」：包A/B/C 七项审计偏差修复（A1..A7，BUGS B-039..B-045 标 fixed）落账 + 本收口——SPEC-03 §9 四行占位展开为正式变更记录并补 config 面板注册/ui_strings 两键两行、SPEC-05 §9 补登 `config_apply`/`chat_config`、SPEC-01 FR-M-10 AC1 补游戏内入口、WORKLOG 测试基线 610→650 并追加审计修复批次行；头部状态行更新为「Phase 0–2 收口 + 审计偏差修复完成，Phase 3 进行中」 | 主 Agent |
+| 2026-08-02 | v1.7 | 新增 SPEC-WEB 网页版完整规格（九册 + SPEC-10 合并重写，55 条 FR / 10 JSON / 全文案内联，网页版开发只读此册） | 用户 |
+| 2026-08-02 | v1.8 | FR-U-06 面板自适应布局落地（IT-U06）：合成/背包/卡片模态面板按视口比例铺开并居中，主菜单/暂停菜单中心锚点，死亡画面垂直居中；`project.godot` 显式补 `stretch/aspect=keep` 并恢复会话中被 Godot 进程改写丢失的 640×360 视口行；SPEC-01/03/06 同步 | 主 Agent |

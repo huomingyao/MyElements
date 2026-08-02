@@ -33,6 +33,12 @@ const KEY_REQUIRES_PURE: String = "requires_pure_check"
 
 const FLAG_PURITY: String = "purity_check_unlocked"
 
+# 铜+酸彩蛋（FR-G-07 口径，包B-A7）：fail_copper_acid 不进通用 no_match 轮转池，
+# 仅当输入确实是铜+酸组合时确定性返回。校验器要求 reason 枚举不变，故数据表不动、引擎分流。
+const EASTER_EGG_FAIL_ID: String = "fail_copper_acid"
+const COPPER_ID: String = "cu"
+const ACID_ID: String = "hcl"
+
 # ==== 逻辑区 ====
 
 var _substances: Array = []
@@ -72,6 +78,9 @@ func _build_fail_pools() -> void:
 		var reason: String = str(dict.get(KEY_REASON, ""))
 		var id: String = str(dict.get(KEY_ID, ""))
 		if reason.is_empty() or id.is_empty():
+			continue
+		if id == EASTER_EGG_FAIL_ID:
+			# 彩蛋文案不进通用轮转池（包B-A7）：铜+酸组合由 _fail_no_match 特判返回。
 			continue
 		var pool: Array = _fail_pools.get(reason, [])
 		pool.append(id)
@@ -155,6 +164,17 @@ func try_craft(items: Array, tool: String, condition: String) -> Dictionary:
 	# 规则 2：材料对但器材/条件都不符 → wrong_condition；规则 4：材料本身不匹配 → no_match。
 	if material_hit:
 		return _fail(REASON_WRONG_CONDITION)
+	return _fail_no_match(wanted)
+
+
+# no_match 的文案裁决（包B-A7）：铜+酸组合确定性返回专属彩蛋（不消耗通用池轮转），
+# 其余组合走通用 no_match 轮转池。
+func _fail_no_match(wanted: Array[String]) -> Dictionary:
+	if wanted.has(COPPER_ID) and wanted.has(ACID_ID):
+		var result: Dictionary = EMPTY_CRAFT_RESULT.duplicate(true)
+		result["fail_reason"] = REASON_NO_MATCH
+		result["fail_tip_id"] = EASTER_EGG_FAIL_ID
+		return result
 	return _fail(REASON_NO_MATCH)
 
 

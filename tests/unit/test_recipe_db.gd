@@ -232,3 +232,62 @@ func test_queries_return_empty_for_unknown_ids() -> void:
 func test_all_substances_has_seventeen_rows() -> void:
 	assert_eq(db.all_substances().size(), 17, "substances.json 应有 17 条")
 
+
+# ==== AC5 反例补齐（包B）：R5、R7~R12 每条约至少一个反例 ====
+# 口径：材料对但器材/条件不符 → wrong_condition；缺一材料凑不出任何配方 → no_match。
+# 正例已由 test_all_eleven_recipes_craft_successfully 逐条覆盖，这里只补反例。
+
+func _assert_wrong_condition(items: Array, tool: String, condition: String, label: String) -> void:
+	var result: Dictionary = db.try_craft(items, tool, condition)
+	assert_false(bool(result.get("success", false)), "%s 不应成功" % label)
+	assert_eq(str(result.get("fail_reason", "")), "wrong_condition",
+		"%s 材料对但器材/条件不呼应报 wrong_condition" % label)
+
+
+func _assert_no_match(items: Array, tool: String, condition: String, label: String) -> void:
+	var result: Dictionary = db.try_craft(items, tool, condition)
+	assert_false(bool(result.get("success", false)), "%s 不应成功" % label)
+	assert_eq(str(result.get("fail_reason", "")), "no_match", "%s 缺一材料应报 no_match" % label)
+
+
+# R5 电解水（h2o_clean / electrolyzer / electrify）：器材错、条件错各一例。
+func test_r5_electrolysis_counter_examples() -> void:
+	_assert_wrong_condition(["h2o_clean"], UNUSED_TOOL, "electrify", "R5 器材不符")
+	_assert_wrong_condition(["h2o_clean"], "electrolyzer", UNUSED_CONDITION, "R5 条件不符")
+
+
+# R7 实验室制 CO2（caco3+hcl / bench / none）：器材错 + 缺 hcl 各一例。
+func test_r7_co2_lab_counter_examples() -> void:
+	_assert_wrong_condition(["caco3", "hcl"], UNUSED_TOOL, "none", "R7 器材不符")
+	_assert_no_match(["caco3"], "bench", "none", "R7 缺 hcl")
+
+
+# R8 检验 CO2（co2+caoh2 / bench / none）：条件错 + 缺 caoh2 各一例。
+func test_r8_co2_test_counter_examples() -> void:
+	_assert_wrong_condition(["co2", "caoh2"], "bench", UNUSED_CONDITION, "R8 条件不符")
+	_assert_no_match(["co2"], "bench", "none", "R8 缺 caoh2")
+
+
+# R9 湿法炼铜（fe+cuso4 / bench / none）：条件错 + 缺 cuso4 各一例。
+func test_r9_wet_copper_counter_examples() -> void:
+	_assert_wrong_condition(["fe", "cuso4"], "bench", "ignite", "R9 条件不符")
+	_assert_no_match(["fe"], "bench", "none", "R9 缺 cuso4")
+
+
+# R10 灭火器原理（nahco3+hcl / bench / none）：条件错 + 缺 nahco3 各一例。
+func test_r10_extinguisher_counter_examples() -> void:
+	_assert_wrong_condition(["nahco3", "hcl"], "bench", "heat", "R10 条件不符")
+	_assert_no_match(["hcl"], "bench", "none", "R10 缺 nahco3")
+
+
+# R11 粗盐提纯（crude_salt / bench / three_step）：条件错、器材错各一例。
+func test_r11_salt_purify_counter_examples() -> void:
+	_assert_wrong_condition(["crude_salt"], "bench", "none", "R11 缺三步条件")
+	_assert_wrong_condition(["crude_salt"], UNUSED_TOOL, "three_step", "R11 器材不符")
+
+
+# R12 碳活化（c / alcohol_lamp / heat）：条件错、器材错各一例。
+func test_r12_carbon_activate_counter_examples() -> void:
+	_assert_wrong_condition(["c"], "alcohol_lamp", UNUSED_CONDITION, "R12 条件不符")
+	_assert_wrong_condition(["c"], "bench", "heat", "R12 器材不符")
+

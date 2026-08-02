@@ -12,6 +12,8 @@ const TIP_CRAFT_HINT: String = "sys_craft_hint"
 
 # 空台交互：通知世界打开通用合成界面（FR-G-05 入口，TP-07 补接线）。
 signal craft_requested(player: Node)
+# 提纯三步完成：知识卡片（来自 recipes.json r_salt_purify，物理变化说明）转交世界弹窗（FR-G-14 AC2）。
+signal card_ready(card: Dictionary)
 
 # ==== 逻辑区 ====
 
@@ -36,12 +38,22 @@ func interact(player: Node) -> void:
 		# 上一轮已完成：复位，准备下一轮。
 		_purifier.reset()
 	if _purifier.is_started():
-		# 流程进行中：推进到下一步（顺序由状态机强制）。
-		_purifier.advance(str(_purifier.expected_step()), inventory)
+		# 流程进行中：推进到下一步（顺序由状态机强制）；完成时卡片转交世界（AC2）。
+		_forward_card(_purifier.advance(str(_purifier.expected_step()), inventory))
 		return
 	if inventory != null and bool(inventory.has_item(INPUT_ID, 1)):
-		_purifier.advance(STEP_DISSOLVE, inventory)
+		_forward_card(_purifier.advance(STEP_DISSOLVE, inventory))
 		return
 	# 空台：引导玩家使用合成，并通知世界打开通用合成界面（FR-G-05）。
 	_show_tip(TIP_CRAFT_HINT)
 	craft_requested.emit(player)
+
+
+# 完成步的 advance 结果带卡片字典：非空即发 card_ready（中间步与拒绝步不发）。
+func _forward_card(result: Dictionary) -> void:
+	if not bool(result.get("done", false)):
+		return
+	var card: Dictionary = result.get("card", {})
+	if card.is_empty():
+		return
+	card_ready.emit(card)

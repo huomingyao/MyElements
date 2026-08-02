@@ -80,10 +80,13 @@ func test_exit_code_reflects_error_presence() -> void:
 
 
 # 约定：资源文件缺失只进 warning，不进 error，不影响退出码。
+# 注入一个格式合法但不存在的路径来验证，不依赖真实资产是否已交付。
 func test_missing_asset_file_is_warning_not_error() -> void:
-	var report: Dictionary = Validator.validate_all(_baseline())
+	var missing: Dictionary = _with_mutated_row(
+		"substances.json", 0, {"icon": "res://assets/art/icons/__not_exist__.png"})
+	var report: Dictionary = Validator.validate_all(missing)
 	var warnings: Array = report.get("warnings", []) as Array
-	assert_gt(warnings.size(), 0, "P4 未开工，图标文件缺失应产生 warning")
+	assert_gt(warnings.size(), 0, "图标文件缺失应产生 warning")
 	assert_eq((report.get("errors", []) as Array).size(), 0, "资源缺失不该进 error")
 	assert_eq(Validator.exit_code_for(report.get("errors", []) as Array), 0, "资源缺失不该影响退出码")
 
@@ -313,15 +316,17 @@ func test_check7_pure_check_uniqueness_violation_reports_error() -> void:
 
 # 第 7 类补充：每个 reason 池至少 2 条，否则 FR-G-07 AC2「连续两次文案不同」不可满足
 # （判定口径见 SPEC-01 FR-G-07 / SPEC-04 §3.1）。
+# 只留 1 条 wrong_condition（包D 后池有 4 条，丢弃到只剩 1 条必然低于下限）。
 func test_check7_fail_message_pool_below_minimum_reports_reason() -> void:
 	var tables: Dictionary = _baseline()
 	var kept: Array = []
-	var dropped_one: bool = false
+	var kept_one: bool = false
 	for row_value in (tables["fail_messages.json"] as Array):
 		var row: Dictionary = row_value as Dictionary
-		if str(row.get("reason", "")) == "wrong_condition" and not dropped_one:
-			dropped_one = true
-			continue
+		if str(row.get("reason", "")) == "wrong_condition":
+			if kept_one:
+				continue
+			kept_one = true
 		kept.append(row.duplicate(true))
 	tables["fail_messages.json"] = kept
 	_assert_error_mentions(

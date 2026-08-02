@@ -11,6 +11,8 @@ const PLACEHOLDER_SATURATION: float = 0.55
 const PLACEHOLDER_VALUE: float = 0.85
 const HUE_FULL_TURN: float = 1.0
 const HASH_NORMALIZER: float = 1073741824.0
+# tooltip 展示的数据字段（包D：codex_line + obtain 来源指引，全部取自数据表，NFR-04）。
+const TOOLTIP_FIELDS: Array[String] = ["codex_line", "obtain"]
 
 # ==== 状态区 ====
 var _substance_id: String = ""
@@ -34,6 +36,7 @@ func bind(substance: Dictionary, unlocked: bool, locked_text: String) -> void:
 		_name_label.text = locked_text
 		_category_label.text = ""
 	_apply_icon(str(substance.get("icon", "")))
+	_apply_tooltip(substance, locked_text)
 
 
 func substance_id() -> String:
@@ -62,6 +65,21 @@ func icon_tint() -> Color:
 
 func icon_texture() -> Texture2D:
 	return _icon.texture
+
+
+# 详情 tooltip（包D）：已收集格展示图鉴一句话 + 获得途径（obtain 字段）；
+# 未收集格只显示占位文案，与剪影同口径不泄露任何数据表内容。
+# 文案逐字来自数据表字段，代码里不出现玩家可见文字（NFR-04）。
+func _apply_tooltip(substance: Dictionary, locked_text: String) -> void:
+	if not _unlocked:
+		tooltip_text = locked_text
+		return
+	var lines: Array[String] = []
+	for field: String in TOOLTIP_FIELDS:
+		var line: String = str(substance.get(field, "")).strip_edges()
+		if not line.is_empty():
+			lines.append(line)
+	tooltip_text = "\n".join(lines)
 
 
 # 图标加载：路径存在用真图标（解锁显示原色，锁定压暗成剪影）；

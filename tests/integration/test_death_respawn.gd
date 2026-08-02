@@ -115,6 +115,44 @@ func test_death_screen_title_comes_from_ui_strings() -> void:
 	assert_eq(str(title.text), expected, "标题文案应取自 ui_strings.%s（NFR-04）" % UI_TITLE_KEY)
 
 
+# ==== 优化包C-5：死亡画面信息丰富化（复活提示 / 掉落可捡回说明 / 坚持天数统计） ====
+
+func test_death_screen_shows_respawn_hint_and_penalty_info() -> void:
+	var screen: Node = _make_screen()
+	if screen == null:
+		return
+	var hint: Node = screen.get_node_or_null(^"%HintLabel")
+	assert_not_null(hint, "死亡画面应有唯一名节点 %HintLabel（复活操作提示）")
+	var info: Node = screen.get_node_or_null(^"%InfoLabel")
+	assert_not_null(info, "死亡画面应有唯一名节点 %InfoLabel（死亡后果说明）")
+	if hint == null or info == null:
+		return
+	var expected_hint: String = _ui_string("death_hint")
+	var expected_info: String = _ui_string("death_info")
+	assert_false(expected_hint.is_empty(), "ui_strings.json 应有 death_hint（复活操作提示）")
+	assert_false(expected_info.is_empty(), "ui_strings.json 应有 death_info（死亡后果说明）")
+	assert_eq(str(hint.text), expected_hint, "复活提示应取自 ui_strings.death_hint（NFR-04）")
+	assert_eq(str(info.text), expected_info, "后果说明应取自 ui_strings.death_info（NFR-04）")
+
+
+func test_death_screen_shows_survived_day_count() -> void:
+	var screen: Node = _make_screen()
+	if screen == null:
+		return
+	var day_label: Node = screen.get_node_or_null(^"%DayLabel")
+	assert_not_null(day_label, "死亡画面应有唯一名节点 %DayLabel（统计信息）")
+	if day_label == null:
+		return
+	var expected_tpl: String = _ui_string("death_day")
+	assert_false(expected_tpl.is_empty(), "ui_strings.json 应有 death_day（坚持天数）")
+	gm.day_count = 3
+	_die_at(DEATH_POSITION)
+	assert_eq(
+		str(day_label.text), expected_tpl.format({"n": 3}),
+		"死亡画面应展示本局坚持天数统计（GameManager.day_count）"
+	)
+
+
 # ==== AC2：复活 → 三值回满、位置回床、背包为空、画面关闭 ====
 
 func test_confirm_respawns_full_stats_and_closes_screen() -> void:
@@ -143,6 +181,31 @@ func test_confirm_without_death_does_nothing() -> void:
 	watch_signals(gm)
 	screen.confirm()
 	assert_signal_not_emitted(gm, "player_respawned", "未死亡时确认不许触发复活")
+
+
+# Esc 不确认复活（收口 W1）：暂停语义键交给 ui_manager 裁决，
+# 死亡画面自身的「任意键确认」不许把 Esc 当成确认键。
+func test_esc_does_not_confirm_death_screen() -> void:
+	var screen: Node = _make_screen()
+	if screen == null:
+		return
+	_die_at(DEATH_POSITION)
+	assert_true(screen.is_open(), "前置条件：死亡画面已打开")
+	watch_signals(gm)
+	# 真实 Esc 是 InputEventKey（pause 动作绑定 Escape，见 project.godot）。
+	var key_event: InputEventKey = InputEventKey.new()
+	key_event.physical_keycode = KEY_ESCAPE
+	key_event.pressed = true
+	screen._unhandled_input(key_event)
+	assert_true(screen.is_open(), "Esc 不许关闭死亡画面")
+	assert_signal_not_emitted(gm, "player_respawned", "Esc 不许触发复活")
+	assert_almost_eq(gm.health, 0.0, 0.001, "Esc 后生命不应被复活回满")
+	# 普通按键仍应确认复活（既有契约不回归）。
+	var any_key: InputEventKey = InputEventKey.new()
+	any_key.physical_keycode = KEY_SPACE
+	any_key.pressed = true
+	screen._unhandled_input(any_key)
+	assert_signal_emitted(gm, "player_respawned", "普通按键仍应确认复活")
 
 
 func test_respawn_moves_player_to_bed_position() -> void:
@@ -251,6 +314,64 @@ func test_pickup_without_inventory_injected_keeps_bag() -> void:
 	bag.interact(_fake_player())
 	assert_false(bag.is_queued_for_deletion(), "未注入背包时不许吞掉掉落包（防御性）")
 	assert_true(bag.can_interact(), "拾取失败后应仍可交互")
+
+
+# 包B修复3：背包满时拾取掉落包，未装下的物品留在包里——不销毁、不置已拾取，
+# 腾位后可再次拾取（参考 collectable.gd 背包满留原地的语义）。
+func test_pickup_with_full_inventory_keeps_leftover_in_bag() -> void:
+	var bag_script: GDScript = _drop_bag_script()
+	if bag_script == null:
+		return
+	var world: Node2D = Node2D.new()
+	add_child_autofree(world)
+	var inventory: RefCounted = InventoryScript.new()
+	# 塞满 8 格 × 堆叠上限，c 已占一格且堆满（add_item 的 leftover 路径全覆盖）。
+	for id: String in ["o2", "h2", "c", "s", "fe", "cu", "nacl", "h2o"]:
+		inventory.add_item(id, inventory.stack_limit())
+	var bag: Node = bag_script.spawn_at(world, DEATH_POSITION, [
+		{"id": "c", "count": 5},
+		{"id": "nacl", "count": 2},
+	])
+	if bag == null:
+		return
+	bag.set_inventory(inventory)
+	bag.interact(_fake_player())
+	assert_false(bag.is_queued_for_deletion(), "背包满时不许销毁掉落包")
+	assert_true(bag.can_interact(), "未全放回时掉落包应仍可交互")
+	assert_eq(inventory.count_of("c"), inventory.stack_limit(), "背包不应溢出堆叠上限")
+	assert_eq(bag.items(), [{"id": "c", "count": 5}, {"id": "nacl", "count": 2}],
+		"未装下的物品应原样留在掉落包内")
+	# 腾出空间后再次拾取：全部回包，包才销毁。
+	inventory.clear()
+	bag.interact(_fake_player())
+	assert_eq(inventory.count_of("c"), 5, "腾位后 c 应全部回包")
+	assert_eq(inventory.count_of("nacl"), 2, "腾位后 nacl 应全部回包")
+	assert_true(bag.is_queued_for_deletion(), "全部放回后掉落包才销毁")
+	assert_false(bag.can_interact(), "全部放回后才置已拾取")
+
+
+# 包B修复3：部分放回——装得下的先入包，剩余量写回掉落包（数量要更新，不是原样复制）。
+func test_pickup_partial_leftover_writes_back_remaining() -> void:
+	var bag_script: GDScript = _drop_bag_script()
+	if bag_script == null:
+		return
+	var world: Node2D = Node2D.new()
+	add_child_autofree(world)
+	var inventory: RefCounted = InventoryScript.new()
+	# 7 格堆满，留 1 个空格：o2 占掉空格，c 堆满装不下剩 1 个。
+	for id: String in ["h2", "c", "s", "fe", "cu", "nacl", "h2o"]:
+		inventory.add_item(id, inventory.stack_limit())
+	var bag: Node = bag_script.spawn_at(world, DEATH_POSITION, [
+		{"id": "o2", "count": 5},
+		{"id": "c", "count": 1},
+	])
+	if bag == null:
+		return
+	bag.set_inventory(inventory)
+	bag.interact(_fake_player())
+	assert_eq(inventory.count_of("o2"), 5, "装得下的部分应正常入包")
+	assert_false(bag.is_queued_for_deletion(), "有剩余时不许销毁掉落包")
+	assert_eq(bag.items(), [{"id": "c", "count": 1}], "剩余量应写回掉落包（仅剩 c×1）")
 
 
 # ==== AC4：下一次死亡前掉落包不消失 ====

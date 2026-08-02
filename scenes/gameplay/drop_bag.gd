@@ -79,9 +79,18 @@ func interact(_player: Node) -> void:
 	if _inventory == null:
 		push_warning("[drop] 未注入背包，拾取被忽略（掉落包保留）")
 		return
-	_collected = true
+	# 统计 add_item 的 leftover：装得下的先入包，装不下的剩余量写回包内，
+	# 未全放回不销毁不置已拾取（背包满吞物品漏洞的修复，同 collectable.gd 的语义）。
+	var remaining: Array[Dictionary] = []
 	for entry: Dictionary in _items:
-		_inventory.add_item(str(entry.get(KEY_ID, "")), int(entry.get(KEY_COUNT, 0)))
+		var leftover: int = int(_inventory.add_item(
+			str(entry.get(KEY_ID, "")), int(entry.get(KEY_COUNT, 0))))
+		if leftover > 0:
+			remaining.append({KEY_ID: str(entry.get(KEY_ID, "")), KEY_COUNT: leftover})
+	if not remaining.is_empty():
+		_items = remaining
+		return
+	_collected = true
 	drop_collected.emit(items())
 	if _current_bag == self:
 		_current_bag = null

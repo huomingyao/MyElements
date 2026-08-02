@@ -164,6 +164,46 @@ func test_bench_without_materials_shows_craft_hint() -> void:
 	assert_true(tip.is_shown("sys_craft_hint"), "空实验台应给合成引导字幕 sys_craft_hint")
 
 
+# AC2（包B-A1）：三步完成时实验台经 card_ready 信号把知识卡片转交世界（此前 advance 返回值被丢弃）。
+func test_bench_emits_card_on_completion() -> void:
+	var bench: Node = _spawn(BENCH_SCENE)
+	if bench == null:
+		return
+	assert_true(bench.has_signal("card_ready"), "实验台应有 card_ready 信号（FR-G-14 AC2）")
+	if not bench.has_signal("card_ready"):
+		return
+	var cards: Array = []
+	bench.card_ready.connect(func(card: Dictionary) -> void: cards.append(card))
+	var player: FakePlayer = _make_player()
+	player.inventory.add_item("crude_salt", 1)
+	for i: int in 3:
+		bench.interact(player)
+	assert_eq(cards.size(), 1, "三步完成应发出一次 card_ready")
+	if cards.size() == 1:
+		var recipe: Dictionary = recipe_db.get_recipe("r_salt_purify")
+		assert_eq(str(cards[0].get("title", "")), str(recipe.get("card_title", "")),
+			"卡片标题应来自 recipes.json 的 r_salt_purify")
+		assert_false(str(cards[0].get("body", "")).is_empty(), "卡片现象应非空（说明这是物理变化）")
+		assert_false(str(cards[0].get("footer", "")).is_empty(), "卡片底行应非空（card_footer）")
+
+
+# AC2（包B-A1）：中间步骤不许弹卡片——前两次交互（溶解/过滤）不发 card_ready。
+func test_bench_intermediate_steps_emit_no_card() -> void:
+	var bench: Node = _spawn(BENCH_SCENE)
+	if bench == null:
+		return
+	if not bench.has_signal("card_ready"):
+		fail_test("实验台应有 card_ready 信号（FR-G-14 AC2）")
+		return
+	var cards: Array = []
+	bench.card_ready.connect(func(card: Dictionary) -> void: cards.append(card))
+	var player: FakePlayer = _make_player()
+	player.inventory.add_item("crude_salt", 1)
+	bench.interact(player)
+	bench.interact(player)
+	assert_eq(cards.size(), 0, "溶解/过滤两步不应弹出知识卡片")
+
+
 # AC3：对湖水使用肥皂水 → 消耗 1 份肥皂水，显示 sys_hardwater。
 func test_lake_water_with_soap_shows_hardwater_tip() -> void:
 	var lake: Node = _spawn(LAKE_SCENE)

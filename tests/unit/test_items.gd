@@ -7,6 +7,9 @@ extends GutTest
 const ITEM_EFFECTS_PATH: String = "res://scripts/gameplay/item_effects.gd"
 const INVENTORY_PATH: String = "res://scripts/gameplay/inventory.gd"
 
+# 字幕队列冲刷时长（秒）：set_zone 的区域横幅会占着播放位，advance 结算队列后再断言 is_shown。
+const TIP_FLUSH_SECONDS: float = 60.0
+
 # SPEC-02 §5 的道具与其类型（effect 枚举见 SPEC-04 §10）。
 const EXPECTED_ITEMS: Dictionary = {
 	"sulfur_torch": {"type": "equip", "effect": "light"},
@@ -272,6 +275,69 @@ func test_unknown_and_material_items_fail_gracefully() -> void:
 	assert_false(bool(material.get("success", true)), "材料型道具不可使用")
 	assert_eq(inv.count_of("stick"), 1, "失败时不应消耗")
 	assert_true(fx.get_item("not_an_item").is_empty(), "未知 id 查询应返回空字典")
+
+
+# 包B修复1：隔空装备漏洞——背包里没有该装备时不许装备成功，更不许进已装备集合。
+func test_equip_requires_item_in_inventory() -> void:
+	if fx == null:
+		return
+	var torch: Dictionary = fx.use_item("sulfur_torch", inv)
+	assert_false(bool(torch.get("success", true)), "背包无硫火把时装备应失败")
+	assert_eq(str(torch.get("reason", "")), "not_in_inventory", "失败原因应为 not_in_inventory")
+	assert_false(fx.is_equipped("sulfur_torch"), "未持有时不应进入已装备集合")
+	var mask: Dictionary = fx.use_item("carbon_mask", inv)
+	assert_false(bool(mask.get("success", true)), "背包无口罩时装备应失败")
+	assert_eq(str(mask.get("reason", "")), "not_in_inventory", "失败原因应为 not_in_inventory")
+	assert_false(fx.is_equipped("carbon_mask"), "未持有时不应进入已装备集合")
+
+
+# 包B修复2：灭火器使用须有即时反馈——items.json 未配 tip_id，走代码兜底字幕
+# tip_co2（灭火器原理是 CO2 隔绝氧气，SPEC-05 R10）；不再静默扣物。
+func test_extinguisher_use_shows_co2_tip() -> void:
+	if fx == null:
+		return
+	inv.add_item("extinguisher", 1)
+	var result: Dictionary = fx.use_item("extinguisher", inv)
+	assert_true(bool(result.get("success", false)), "灭火器使用应成功")
+	assert_eq(inv.count_of("extinguisher"), 0, "灭火器应消耗")
+	assert_eq(str(result.get("tip_id", "")), "tip_co2", "灭火器应兜底触发 tip_co2 字幕")
+	assert_true(tip.is_shown("tip_co2"), "灭火器使用应显示 CO2 灭火原理字幕")
+
+
+# 包B修复2：肥皂水使用触发硬水鉴别字幕（sys_hardwater，items.json 已配），不再零反馈。
+# 包B-A5：硬水鉴别只在盐湖（湖水区域）生效——先切到 saltlake 再使用。
+func test_soap_water_use_shows_hardwater_tip() -> void:
+	if fx == null:
+		return
+	gm.set_zone("saltlake")
+	inv.add_item("soap_water", 1)
+	var result: Dictionary = fx.use_item("soap_water", inv)
+	assert_true(bool(result.get("success", false)), "盐湖区域肥皂水使用应成功")
+	assert_eq(inv.count_of("soap_water"), 0, "肥皂水应消耗")
+	# 入队≠已展示：set_zone 的盐湖区横幅占着播放位，结算队列后再断言。
+	tip.advance(TIP_FLUSH_SECONDS)
+	assert_true(tip.is_shown("sys_hardwater"), "肥皂水应触发 sys_hardwater 字幕")
+	gm.set_zone("grassland")
+
+
+# 包B-A5（FR-G-12 边界）：肥皂水不许随地用——盐湖以外使用失败、不消耗、不播硬水字幕。
+func test_soap_water_outside_saltlake_fails_without_consuming() -> void:
+	if fx == null:
+		return
+	gm.set_zone("grassland")
+	inv.add_item("soap_water", 1)
+	var result: Dictionary = fx.use_item("soap_water", inv)
+	assert_false(bool(result.get("success", true)), "盐湖以外肥皂水不应使用成功")
+	assert_eq(str(result.get("reason", "")), "wrong_place", "失败原因应为 wrong_place")
+	assert_eq(inv.count_of("soap_water"), 1, "使用失败不应消耗肥皂水")
+	assert_false(tip.is_shown("sys_hardwater"), "盐湖以外不应播硬水鉴别字幕")
+	# 其他非盐湖区域（矿洞/营地）同样拒绝。
+	for zone: String in ["mine", "camp"]:
+		gm.set_zone(zone)
+		var retry: Dictionary = fx.use_item("soap_water", inv)
+		assert_false(bool(retry.get("success", true)), "%s 区域肥皂水不应生效" % zone)
+		assert_eq(inv.count_of("soap_water"), 1, "%s 区域不应消耗肥皂水" % zone)
+	gm.set_zone("grassland")
 
 
 # 逻辑代码不许出现中文文案（NFR-04；push_warning/push_error/print 诊断日志除外）。
