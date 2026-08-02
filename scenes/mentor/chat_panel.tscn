@@ -1,0 +1,59 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scenes/mentor/chat_panel.gd" id="1"]
+
+[sub_resource type="StyleBoxFlat" id="bg"]
+bg_color = Color(0.08, 0.08, 0.12, 0.92)
+
+[node name="ChatPanel" type="Control"]
+visible = false
+anchor_right = 1.0
+anchor_top = 0.58
+anchor_bottom = 1.0
+script = ExtResource("1")
+
+[node name="Panel" type="PanelContainer" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_styles/panel = SubResource("bg")
+
+[node name="Root" type="HBoxContainer" parent="Panel"]
+
+[node name="Left" type="VBoxContainer" parent="Panel/Root"]
+custom_minimum_size = Vector2(104, 0)
+
+[node name="MentorAvatar" type="TextureRect" parent="Panel/Root/Left"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(96, 96)
+expand_mode = 1
+stretch_mode = 5
+
+[node name="MentorName" type="Label" parent="Panel/Root/Left"]
+unique_name_in_owner = true
+horizontal_alignment = 1
+
+[node name="Right" type="VBoxContainer" parent="Panel/Root"]
+size_flags_horizontal = 3
+
+[node name="HistoryScroll" type="ScrollContainer" parent="Panel/Root/Right"]
+unique_name_in_owner = true
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="HistoryList" type="VBoxContainer" parent="Panel/Root/Right/HistoryScroll"]
+unique_name_in_owner = true
+size_flags_horizontal = 3
+
+[node name="Bottom" type="HBoxContainer" parent="Panel/Root/Right"]
+
+[node name="InputLine" type="LineEdit" parent="Panel/Root/Right/Bottom"]
+unique_name_in_owner = true
+size_flags_horizontal = 3
+
+[node name="SendButton" type="Button" parent="Panel/Root/Right/Bottom"]
+unique_name_in_owner = true
+text = ">"
+
+[node name="CloseButton" type="Button" parent="Panel/Root/Right/Bottom"]
+unique_name_in_owner = true
+text = "x"

@@ -1,0 +1,42 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scenes/player/player.gd" id="1"]
+[ext_resource type="Script" path="res://scenes/player/interactor.gd" id="2"]
+[ext_resource type="Script" path="res://scenes/player/player_camera.gd" id="3"]
+
+[sub_resource type="RectangleShape2D" id="body_shape"]
+size = Vector2(16, 24)
+
+[sub_resource type="CircleShape2D" id="interact_shape"]
+radius = 28.0
+
+[node name="Player" type="CharacterBody2D"]
+script = ExtResource("1")
+
+[node name="Body" type="CollisionShape2D" parent="."]
+shape = SubResource("body_shape")
+
+[node name="Interactor" type="Area2D" parent="."]
+unique_name_in_owner = true
+script = ExtResource("2")
+
+[node name="Shape" type="CollisionShape2D" parent="Interactor"]
+shape = SubResource("interact_shape")
+
+[node name="PromptBubble" type="Label" parent="."]
+unique_name_in_owner = true
+offset_left = -20.0
+offset_top = -32.0
+offset_right = 20.0
+offset_bottom = -19.0
+horizontal_alignment = 1
+
+[node name="ViewLight" type="PointLight2D" parent="."]
+unique_name_in_owner = true
+enabled = false
+
+[node name="Camera" type="Camera2D" parent="."]
+unique_name_in_owner = true
+enabled = true
+position_smoothing_enabled = true
+script = ExtResource("3")

@@ -1,0 +1,21 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scenes/gameplay/facility_campfire.gd" id="1_script"]
+
+[sub_resource type="CircleShape2D" id="1_shape"]
+radius = 16.0
+
+[sub_resource type="CircleShape2D" id="2_aura"]
+radius = 48.0
+
+[node name="FacilityCampfire" type="Area2D"]
+script = ExtResource("1_script")
+
+[node name="Shape" type="CollisionShape2D" parent="."]
+shape = SubResource("1_shape")
+
+[node name="HealAura" type="Area2D" parent="."]
+unique_name_in_owner = true
+
+[node name="Shape" type="CollisionShape2D" parent="HealAura"]
+shape = SubResource("2_aura")

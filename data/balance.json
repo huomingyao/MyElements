@@ -1,0 +1,48 @@
+{
+  "stats": {
+    "oxygen_max": 100.0,
+    "energy_max": 100.0,
+    "health_max": 100.0,
+    "oxygen_drain": { "grassland": 0.5, "camp": 0.5, "saltlake": 0.0, "mine": 2.0, "academy": 0.0 },
+    "oxygen_regen_safe": 1.0,
+    "energy_drain": 0.3,
+    "health_regen_campfire": 1.0,
+    "oxygen_zero_health_drain": 5.0,
+    "low_energy_speed_multiplier": 0.5,
+    "hud_low_oxygen_threshold": 30.0,
+    "tutorial_oxygen_hint_at": 70.0
+  },
+  "daynight": {
+    "day_duration": 360.0,
+    "night_duration": 180.0,
+    "night_brightness": 0.35,
+    "dark_view_radius": 80.0,
+    "torch_view_radius": 220.0
+  },
+  "damage": {
+    "co_ghost_per_second": 8.0,
+    "acid_mist_per_hit": 10.0,
+    "hydrogen_explosion": 50.0,
+    "cuso4_pool_per_second": 5.0
+  },
+  "player": {
+    "move_speed": 110.0,
+    "jump_velocity": -300.0,
+    "gravity": 900.0,
+    "interact_radius": 28.0
+  },
+  "monsters": {
+    "co_ghost_speed": 28.0,
+    "acid_mist_speed": 90.0,
+    "acid_mist_night_count_min": 2,
+    "acid_mist_night_count_max": 3
+  },
+  "items": {
+    "oxygen_tank_restore": 50.0,
+    "glucose_restore": 20.0,
+    "campfire_meal_restore": 40.0
+  },
+  "inventory": { "hotbar_slots": 8, "stack_limit": 99 },
+  "llm": { "timeout_seconds": 8.0, "retry_count": 1, "history_rounds": 4, "max_tokens": 300, "temperature": 0.7, "input_max_chars": 200 },
+  "debug": { "force_purity_unlock": false, "fast_daynight": false }
+}

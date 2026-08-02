@@ -1,0 +1,90 @@
+[
+  {
+    "id": "sulfur_torch",
+    "name": "硫火把",
+    "type": "equip",
+    "icon": "res://assets/art/icons/sulfur_torch.png",
+    "effect": "light",
+    "effect_value_key": "daynight.torch_view_radius",
+    "consumable": false,
+    "tip_id": "warn_night"
+  },
+  {
+    "id": "neutral_spray",
+    "name": "中和喷雾",
+    "type": "consume",
+    "icon": "res://assets/art/icons/neutral_spray.png",
+    "effect": "kill_acid",
+    "consumable": true,
+    "tip_id": "sys_spray"
+  },
+  {
+    "id": "carbon_mask",
+    "name": "活性炭口罩",
+    "type": "equip",
+    "icon": "res://assets/art/icons/carbon_mask.png",
+    "effect": "immune_co",
+    "consumable": false,
+    "tip_id": "sys_mask"
+  },
+  {
+    "id": "extinguisher",
+    "name": "灭火器",
+    "type": "consume",
+    "icon": "res://assets/art/icons/extinguisher.png",
+    "effect": "extinguish",
+    "consumable": true
+  },
+  {
+    "id": "oxygen_tank",
+    "name": "氧气瓶",
+    "type": "consume",
+    "icon": "res://assets/art/icons/oxygen_tank.png",
+    "effect": "restore_oxygen",
+    "effect_value_key": "items.oxygen_tank_restore",
+    "consumable": true
+  },
+  {
+    "id": "glucose",
+    "name": "葡萄糖",
+    "type": "consume",
+    "icon": "res://assets/art/icons/glucose.png",
+    "effect": "restore_energy",
+    "effect_value_key": "items.glucose_restore",
+    "consumable": true,
+    "tip_id": "sys_energy_food"
+  },
+  {
+    "id": "soap_water",
+    "name": "肥皂水",
+    "type": "consume",
+    "icon": "res://assets/art/icons/soap_water.png",
+    "effect": "test_hardwater",
+    "consumable": true,
+    "tip_id": "sys_hardwater"
+  },
+  {
+    "id": "stick",
+    "name": "木棒",
+    "type": "material",
+    "icon": "res://assets/art/icons/stick.png",
+    "effect": "none",
+    "consumable": false
+  },
+  {
+    "id": "cu",
+    "name": "铜",
+    "type": "material",
+    "icon": "res://assets/art/icons/cu.png",
+    "effect": "none",
+    "consumable": false
+  },
+  {
+    "id": "nahco3",
+    "name": "碳酸氢钠",
+    "type": "material",
+    "icon": "res://assets/art/icons/nahco3.png",
+    "effect": "none",
+    "consumable": false
+  }
+]

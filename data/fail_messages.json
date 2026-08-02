@@ -1,0 +1,7 @@
+[
+  { "id": "fail_physical_mix", "reason": "no_match", "text": "没有新物质生成——这只是物理混合，不是化学反应" },
+  { "id": "fail_no_product", "reason": "no_match", "text": "没有生成沉淀、气体或水，所以不反应" },
+  { "id": "fail_condition", "reason": "wrong_condition", "text": "条件不够——有些反应需要点燃、加热、通电或催化剂" },
+  { "id": "fail_wrong_tool", "reason": "wrong_condition", "text": "器材不对——便携格、酒精灯、实验台和电解器能做的反应各不相同" },
+  { "id": "fail_copper_acid", "reason": "no_match", "text": "无事发生……铜排在氢后面，不与酸反应" }
+]
